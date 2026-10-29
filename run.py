@@ -57,8 +57,12 @@ def print_findings(result):
 def calibrate():
     """A grader that cannot separate bad from good is a harness bug."""
     fixtures = json.loads((ROOT / "fixtures.json").read_text())
+    judged = not judges.available()
     ok = True
     for rule, pair in fixtures.items():
+        if judged and rule in judges.RULES:
+            print(f"skip  {rule}: no judge")
+            continue
         bad = grade_bundle(pair["bad"], {rule})
         good = grade_bundle(pair["good"], {rule})
 
