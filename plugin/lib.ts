@@ -1,0 +1,86 @@
+import { spawn } from "node:child_process"
+import { existsSync } from "node:fs"
+import { rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join, resolve } from "node:path"
+
+export type Lint = { clean: boolean; output: string }
+
+function exec(command: string, args: string[], cwd: string, stdin?: string) {
+  return new Promise<{ code: number; stdout: string; stderr: string }>((resolve) => {
+    const child = spawn(command, args, { cwd })
+    let stdout = ""
+    let stderr = ""
+    child.stdout.on("data", (chunk) => (stdout += chunk))
+    child.stderr.on("data", (chunk) => (stderr += chunk))
+    child.on("error", (error) => resolve({ code: -1, stdout, stderr: String(error) }))
+    child.on("close", (code) => resolve({ code: code ?? -1, stdout, stderr }))
+    if (stdin !== undefined) child.stdin.end(stdin)
+    else child.stdin.end()
+  })
+}
+
+/** Where the harness lives. Project copy wins, then the package root. */
+export function locate(directory: string, pluginDir: string): string | null {
+  const candidates = [
+    process.env.HARRY_HARNESS,
+    `${directory}/.harry`,
+    `${pluginDir}/..`,
+  ].filter((path): path is string => Boolean(path))
+
+  for (const path of candidates) {
+    const root = resolve(path)
+    if (existsSync(`${root}/run.py`)) return root
+  }
+  return null
+}
+
+export function harness(directory: string, pluginDir: string) {
+  const root = locate(directory, pluginDir)
+  const script = root ? `${root}/run.py` : `${directory}/.harry/run.py`
+
+  return {
+    root,
+
+    async lint(diff: string): Promise<Lint> {
+      if (!root) {
+        return { clean: false, output: "harry not found. Set HARRY_HARNESS or vendor it." }
+      }
+      const { stdout } = await exec("python3", [script, "--diff", "-"], directory, diff)
+      const output = stdout.trim()
+      return { clean: output === "clean", output }
+    },
+
+    async suggest(message: string): Promise<string> {
+      const file = join(tmpdir(), `harry-${process.pid}.msg`)
+      await writeFile(file, message)
+      try {
+        const { stdout } = await exec(
+          "python3",
+          [script, "--commit-msg", file, "--suggest"],
+          directory,
+        )
+        return stdout.match(/^suggested: (.+)$/m)?.[1]?.trim() ?? ""
+      } finally {
+        await rm(file, { force: true })
+      }
+    },
+
+    async commit(message: string) {
+      const { code, stderr } = await exec("git", ["commit", "-m", message], directory)
+      if (code !== 0) throw new Error(stderr.trim() || "commit failed")
+    },
+
+    async staged(): Promise<string> {
+      const { stdout } = await exec("git", ["diff", "--cached"], directory)
+      return stdout
+    },
+
+    async working(): Promise<string> {
+      const head = await exec("git", ["diff", "HEAD"], directory)
+      if (head.code === 0) return head.stdout
+      const cached = await exec("git", ["diff", "--cached"], directory)
+      return cached.stdout
+    },
+  }
+}

@@ -1,0 +1,33 @@
+# local harness state
+.harry/
+runs/
+.scratch/
+goldens/
+goldens.jsonl
+baseline.json
+
+# dependencies and builds
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# env and secrets
+.env
+.env.*
+
+# editors and os
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+npm-debug.log*

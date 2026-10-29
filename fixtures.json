@@ -1,0 +1,122 @@
+{
+  "comment_detritus": {
+    "bad": {
+      "diff": "+// changed from a loop because it was slow\n+const rows = await db.batch(ids)\n"
+    },
+    "good": {
+      "diff": "+// batch lookup: one round trip for N ids\n+const rows = await db.batch(ids)\n"
+    }
+  },
+  "comment_restates": {
+    "bad": {
+      "diff": "+// fetch the events\n+const events = await fetchEvents();\n"
+    },
+    "good": {
+      "diff": "+// batch lookup: one round trip for N ids\n+const rows = await db.batch(ids)\n"
+    }
+  },
+  "commented_out_code": {
+    "bad": {
+      "diff": "+// const old = compute()\n+const next = compute()\n"
+    },
+    "good": {
+      "diff": "+// Retries are capped so a flapping feed cannot pin a worker.\n+const MAX = 3\n"
+    }
+  },
+  "commit_subject": {
+    "bad": {
+      "commit": "Added the aircraft source and fixed the filter.\n\nBecause the old filter dropped slow planes.\n"
+    },
+    "good": {
+      "commit": "Add aircraft source with position-age filter\n\nSlow planes were dropped before they reached the map.\n"
+    }
+  },
+  "error_message": {
+    "bad": {
+      "diff": "+throw new \\Exception('Failed to create ZIP file.');\n"
+    },
+    "good": {
+      "diff": "+throw new \\Exception('zip_open_failed: could not create the archive, check the export directory is writable');\n"
+    }
+  },
+  "explains_why": {
+    "bad": {
+      "diff": "+// set the value\n+value = 3\n"
+    },
+    "good": {
+      "diff": "+// cap at three: a fourth retry only delays the failure\n+const MAX = 3\n"
+    }
+  },
+  "intent_first": {
+    "bad": {
+      "pr_body": "This PR touches several files.\n"
+    },
+    "good": {
+      "pr_body": "Lets the map show aircraft so that low traffic appears next to events.\n"
+    }
+  },
+  "name_pronoun": {
+    "bad": {
+      "diff": "+const data = encode(value)\n"
+    },
+    "good": {
+      "diff": "+const bytes = encode(value)\n"
+    }
+  },
+  "narration_segmented": {
+    "bad": {
+      "narration": "The file does a fetch and it checks robots and it follows redirects and it caps the size and it validates the content type and it throws on each failure and the caller retries.\n"
+    },
+    "good": {
+      "narration": "safe-fetch guards every outbound request.\n\nIt checks robots first, then follows redirects one hop at a time and re-checks each hop.\n\nIt fails closed: a redirect to a private address throws instead of being followed.\n"
+    }
+  },
+  "restate": {
+    "bad": {
+      "pr_body": "Various changes to the ingest path.\n"
+    },
+    "good": {
+      "pr_body": "Rejects redirects to private addresses so the fetcher cannot be pointed at internal hosts.\n"
+    }
+  },
+  "ste_procedure": {
+    "bad": {
+      "pr_body": "Prior to the deployment, the migration is commenced by the operator and the cache is cleared by the same operator before the traffic is restored to the service.\n"
+    },
+    "good": {
+      "pr_body": "Run the migration first. Clear the cache. Restore traffic.\n"
+    }
+  },
+  "what_recovery": {
+    "bad": {
+      "what_after": "The safe-fetch module performs a fetch operation and validates robots and handles redirects and enforces size limits and checks content types and raises exceptions on failure which the caller then retries according to policy.\n"
+    },
+    "good": {
+      "what_after": "safe-fetch is the gate in front of every outbound request.\n\nIt starts with robots, then walks redirects one hop at a time and re-checks each hop, because a public URL can bounce to a private one.\n\nWhen a hop looks wrong it throws rather than following. The caller sees the failure and retries.\n"
+    }
+  },
+  "todo_bare": {
+    "bad": {
+      "diff": "+// TODO clean this up\n+const rows = 1;\n"
+    },
+    "good": {
+      "diff": "+// TODO(marco): drop once the v1 endpoint is gone\n+const rows = 1;\n"
+    }
+  },
+  "empty_catch": {
+    "bad": {
+      "diff": "+try {\n+  await send();\n+} catch (e) {}\n"
+    },
+    "good": {
+      "diff": "+try {\n+  await send();\n+} catch (e) {\n+  // offline is fine, the queue retries\n+}\n"
+    }
+  },
+  "unit_in_name": {
+    "bad": {
+      "diff": "+const fetchTimeout = 8000;\n"
+    },
+    "good": {
+      "diff": "+const fetchTimeoutMs = 8000;\n"
+    }
+  }
+}
