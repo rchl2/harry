@@ -1,5 +1,5 @@
-import { Slot, type Context } from "@opencode/plugin/gui"
 import { toItems, type State } from "./state"
+import { Slot, type Context } from "@opencode/plugin/gui"
 
 /** A count in the session header, for people who keep the side region closed. */
 export function registerBadge(ctx: Context, state: State) {

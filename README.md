@@ -1,8 +1,8 @@
 # Harry
 
-A linter for the prose that ships with code: comments, commit messages, PR bodies, names, error messages.
+A linter for the prose your coding agent writes: comments, commit messages, PR bodies, names, error messages.
 
-It runs inside opencode. The rules go into every request, so the agent writes to them without being told, and the check runs on its own when the agent stops.
+Agent output is often correct and unreadable. Harry checks it while you work, so reviewers spend their time on the logic instead of on `const data` and comments that repeat the code.
 
 ## Install
 
@@ -12,96 +12,45 @@ Needs Python 3.11 or newer.
 npm_config_allow_git=all opencode plugin add 'github:rchl2/harry'
 ```
 
-If you forked it, swap `rchl2` for your account.
+`npm_config_allow_git=all` is there because many npm configs set `allow-git`, which blocks git installs. Drop it if yours does not.
 
-`npm_config_allow_git=all` is there because many npm configs set `allow-git`, which blocks git installs with `Fetching packages of type "git" have been disabled`. Drop it if yours does not.
+Restart opencode afterwards.
 
-If you cloned it locally instead, point the config at the directory:
+## What it does
 
-```jsonc
-{ "plugins": ["/Users/you/harry"] }
-```
+When a turn changes the diff, Harry lints it and hands the findings to the agent, which fixes them. You get a count above the composer and a panel with the details.
 
-Check it loaded with `/harry-status`. A toast says `harness found` or `harness not found`.
-
-If it is not found, set `HARRY_HARNESS` to the directory holding `run.py`.
-
-## What happens on its own
-
-When the agent finishes a turn, Harry lints the working diff — but only if that turn actually changed it. A question answered with no edits stays quiet. If anything is wrong it posts the findings into the session, and the agent fixes them before handing over. Three nags per turn, then it stops.
-
-Nothing blocks. If a finding is wrong, keep going and fix the rule later.
-
-The automatic check needs a server that outlives the turn. It works in the TUI and in Desktop. Under `opencode run` the location shuts down first, so use `/harry` there.
+Nothing blocks. If a finding is wrong, keep going and fix the rule.
 
 ## What it catches
 
 ```
 $ /harry
   name_pronoun:5  `data` is a pronoun. Name what it holds.
-    const data = await db.batch(ids)
 ```
 
 - comments that restate the code
 - commit subjects in past tense, or over fifty characters
-- `const data`, `const temp`, `const result`, `const res`
+- `const data`, `const temp`, `const result`
 - `const fetchTimeout` with no unit
 - `throw new Error('bad_payload')` with no next action
 - commented-out code
 - bare TODOs, and catches that swallow silently
-- flat narration, and a PR body a reviewer cannot restate
 
 ## Commands
 
-`/harry` lints the working diff now. `/harry-reload` re-reads the rules after you edit them. `/harry-status` toasts the harness path it found. `/harry-update` reinstalls from the repo.
+`/harry` lints now, without waiting for a turn. `/harry-status` shows whether it is loaded. `/harry-open` opens the rules. `/harry-reload` re-reads them after an edit. `/harry-update` reinstalls.
 
-`/commit` lints the staged diff, offers three subjects, and commits the one you pick.
-
-Commit by hand with `git commit` and the message goes unchecked. Use `/commit` when you want it checked:
-
-```
-$ /commit
-  name_pronoun:5  `data` is a pronoun. Name what it holds.
-
-Pick one with /commit <n>:
-1. Add aircraft source
-2. Introduce aircraft source
-3. Wire the aircraft source
-
-$ /commit 1
-Committed: Add aircraft source
-
-3735 tokens, $0.0000
-```
-
-The token line is the draft's own usage, so you can see what a picker costs.
+`/commit` lints the staged diff, offers three subjects, and commits the one you pick. Harry also offers this when a turn ends clean with something staged.
 
 ## Rules
 
-`rules/writing_styles.md`. Edit them.
-
-## Turning it down
-
-Rule injection costs about 900 tokens on every request. The automatic check is the noisiest part. Both are switchable:
-
-```jsonc
-{
-  "plugins": [
-    {
-      "package": "github:rchl2/harry",
-      "options": { "injectRules": false, "autoCheck": false }
-    }
-  ]
-}
-```
-
-## Changing a rule
-
-See [EVALS.md](EVALS.md).
+`rules/writing_styles.md`. Edit them. Settings has a Harry section for turning injection and the automatic check off.
 
 ## Limits
 
 - It grades prose, not code. A clean run says nothing about whether the change works.
+- Rubric-shaped comments are worse than none. Keep reading the output.
 - The judged rules can flake.
 
 ## Credit

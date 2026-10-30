@@ -25,10 +25,27 @@ export function registerPanel(ctx: Context, state: State) {
     const open = toItems(state.findings[props.session.directory])
     const done = toItems(state.fixed[props.session.directory])
 
+    const ask = () => {
+      const list = open
+        .map((item) => `- ${item.file}:${item.line} ${item.rule}: ${item.message}`)
+        .join("\n")
+      void ctx.client.session.prompt({
+        sessionID: props.session.id,
+        text: `Harry found these prose issues. Fix them, then keep going.\n\n${list}`,
+      })
+    }
+
     return (
       <box flexDirection="column" gap={1}>
-        <text wrapMode="word">{open.length ? `${open.length} in these changes` : "No issues in these changes."}</text>
-        {open.length > 0 && <text wrapMode="word">Fixed on the next turn, or ask the agent now.</text>}
+        <box flexDirection="row" justifyContent="space-between">
+          <text wrapMode="word">{open.length ? `${open.length} in these changes` : "No issues in these changes."}</text>
+          {open.length > 0 && (
+            <ctx.ui.Button variant="ghost" size="small" icon="prompt" onClick={ask}>
+              Ask agent to fix
+            </ctx.ui.Button>
+          )}
+        </box>
+        {open.length > 0 && <text wrapMode="word">Fixed on the next turn, or use the button.</text>}
         <For each={open}>{(item) => Row(ctx, { item, directory: props.session.directory })}</For>
         {done.length > 0 && <text>{`Fixed (${done.length})`}</text>}
         <For each={done}>{(item) => Row(ctx, { item, directory: props.session.directory })}</For>
