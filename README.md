@@ -9,10 +9,8 @@ Agent output is often correct and unreadable. Harry checks it while you work, so
 Needs Python 3.11 or newer.
 
 ```bash
-npm_config_allow_git=all opencode plugin add 'github:rchl2/harry'
+opencode plugin add opencode-harry
 ```
-
-`npm_config_allow_git=all` is there because many npm configs set `allow-git`, which blocks git installs. Drop it if yours does not.
 
 Restart opencode afterwards.
 
@@ -53,9 +51,9 @@ The rules are global. Test sets are not: `/harry-goldens` writes `.harry/` in th
 
 ## Updating
 
-`/harry-update`, then restart. It removes the plugin, clears the cache, and re-adds it.
+`/harry-update`, then restart. It runs `opencode plugin update opencode-harry`.
 
-`opencode plugin update` does not work for a git spec, and re-adding alone reuses the cache, so the command does both steps.
+Pin a version with `opencode plugin add opencode-harry@0.1.0` if a release lands before you want it.
 
 ## Limits
 

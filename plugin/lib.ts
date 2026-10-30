@@ -98,12 +98,7 @@ export function harness(directory: string, pluginDir: string) {
     },
 
     async update(): Promise<string> {
-      const steps = [
-        "opencode plugin remove 'github:rchl2/harry'",
-        'rm -rf "$HOME/.cache/opencode/npm/git-harry-"*',
-        "npm_config_allow_git=all opencode plugin add 'github:rchl2/harry'",
-      ].join(" && ")
-      const { code, stdout, stderr } = await exec("sh", ["-c", steps], directory)
+      const { code, stdout, stderr } = await exec("opencode", ["plugin", "update", "opencode-harry"], directory)
       return code === 0 ? "Updated. Restart opencode." : (stderr || stdout).trim()
     },
 

@@ -36,6 +36,20 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build:gui": "vite build"
+    "build:gui": "vite build",
+    "check:pack": "sh scripts/check-pack.sh",
+    "prepublishOnly": "npm run typecheck && npm run build:gui && npm run check:pack"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rchl2/harry.git"
+  },
+  "homepage": "https://github.com/rchl2/harry#readme",
+  "bugs": {
+    "url": "https://github.com/rchl2/harry/issues"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

@@ -17,15 +17,6 @@ jobs:
       # the bundle is committed; this catches a build that no longer compiles
       - run: npm run build:gui
       # `files` is hand-maintained; a missing entry ships a broken package
-      - name: every imported file is packed
-        run: |
-          npm pack --dry-run > /tmp/pack.txt 2>&1
-          for file in plugin/index.ts plugin/lib.ts plugin/rpc.ts plugin/draft.ts plugin/rules.ts \
-                      plugin/gui/index.tsx plugin/gui/state.ts plugin/gui/commands.ts \
-                      plugin/gui/panel.tsx plugin/gui/pill.tsx plugin/gui/settings.tsx \
-                      dist/gui-experimental.cjs examples/goldens.jsonl \
-                      scripts/generate-goldens.py; do
-            grep -q "$file" /tmp/pack.txt || { echo "missing from package: $file"; exit 1; }
-          done
+      - run: npm run check:pack
       # no opencode on the runner, so the judged rules skip and CI covers the deterministic ones
       - run: python3 run.py --calibrate
