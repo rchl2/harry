@@ -54,7 +54,7 @@ export default Plugin.define({
         prompt:
           "Write three commit subjects for this diff. Imperative mood, under " +
           "fifty characters, no trailing period, no 'we'. One per line, no " +
-          "numbering, no fences.\n\n" + diff.slice(0, 6000),
+          "numbering, no fences.\n\n" + diff.slice(0, 2000),
         model: { providerID: selected.providerID, id: selected.id },
       })
 

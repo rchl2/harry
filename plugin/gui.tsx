@@ -22,12 +22,20 @@ export default Plugin.define({
       .catch(() => {})
 
     // the RPC returns an array, but a stringified payload must not break the panel
-    const toItems = (value: unknown): Findings["items"] => {
+    const asItems = (value: unknown): Findings["items"] | undefined => {
       if (Array.isArray(value)) return value as Findings["items"]
+      if (value && typeof value === "object" && Array.isArray((value as Findings).items)) {
+        return (value as Findings).items
+      }
+      return undefined
+    }
+
+    const toItems = (value: unknown): Findings["items"] => {
+      const direct = asItems(value)
+      if (direct) return direct
       if (typeof value !== "string") return []
       try {
-        const parsed = JSON.parse(value)
-        return Array.isArray(parsed) ? parsed : []
+        return asItems(JSON.parse(value)) ?? []
       } catch {
         return []
       }
