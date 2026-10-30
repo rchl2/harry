@@ -11,6 +11,8 @@
     "plugin/index.ts",
     "plugin/lib.ts",
     "plugin/rpc.ts",
+    "plugin/draft.ts",
+    "plugin/rules.ts",
     "plugin/gui",
     "dist/gui-experimental.cjs",
     "run.py",
