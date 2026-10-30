@@ -26,16 +26,9 @@ If you cloned it locally instead, point the config at the directory:
 { "plugins": ["/Users/you/harry"] }
 ```
 
-Check it loaded with `/harry-status`:
+Check it loaded with `/harry-status`. A toast reports the harness path it found, or `harness not found`.
 
-```
-plugin: harry
-harness: /Users/you/harry
-found: yes
-rules injected: yes
-```
-
-`found: no` means the plugin loaded but could not find `run.py`. Set `HARRY_HARNESS` to the directory holding it.
+If it is not found, set `HARRY_HARNESS` to the directory holding `run.py`.
 
 ## What happens on its own
 
@@ -64,7 +57,7 @@ $ /harry
 
 ## Commands
 
-`/harry` lints the working diff now. `/harry-status` shows what the plugin found. `/harry-reload` re-reads the rules after you edit them.
+`/harry` lints the working diff now. `/harry-reload` re-reads the rules after you edit them. `/harry-status` toasts the harness path it found.
 
 `/commit` lints the staged diff, offers three subjects, and commits the one you pick.
 

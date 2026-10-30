@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "type": "module",
   "exports": {
-    ".": "./plugin/index.ts"
+    ".": "./plugin/index.ts",
+    "./tui": "./plugin/tui.ts"
   },
   "files": [
     "plugin/index.ts",
     "plugin/lib.ts",
+    "plugin/tui.ts",
     "run.py",
     "graders",
     "rules",

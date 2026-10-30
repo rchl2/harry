@@ -66,20 +66,6 @@ export default Plugin.define({
 
     await ctx.command.transform((editor) => {
       editor.add({
-        name: "harry-status",
-        description: "Show whether harry is loaded and where it points",
-        execute: async ({ sessionID }) => {
-          const lines = [
-            `plugin: harry`,
-            `harness: ${h.root ?? "(not found)"}`,
-            `found: ${h.root ? "yes" : "no"}`,
-            `rules injected: ${rules && inject ? "yes" : "no"}`,
-          ]
-          await ctx.session.prompt({ sessionID, text: lines.join("\n") })
-        },
-      })
-
-      editor.add({
         name: "harry-reload",
         description: "Re-read the rules and skill from disk after editing them",
         execute: async ({ sessionID }) => {

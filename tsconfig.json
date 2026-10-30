@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["plugin/index.ts", "plugin/lib.ts"]
+  "include": ["plugin/index.ts", "plugin/lib.ts", "plugin/tui.ts"]
 }
