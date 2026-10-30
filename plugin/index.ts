@@ -66,6 +66,16 @@ export default Plugin.define({
 
     await ctx.command.transform((editor) => {
       editor.add({
+        name: "harry-update",
+        description: "Reinstall harry from the repo and clear the cache",
+        execute: async ({ sessionID }) => {
+          await ctx.session.synthetic({ sessionID, text: "Updating harry…" })
+          const outcome = await h.update()
+          await ctx.session.prompt({ sessionID, text: outcome })
+        },
+      })
+
+      editor.add({
         name: "harry-reload",
         description: "Re-read the rules and skill from disk after editing them",
         execute: async ({ sessionID }) => {

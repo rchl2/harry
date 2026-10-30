@@ -57,7 +57,7 @@ $ /harry
 
 ## Commands
 
-`/harry` lints the working diff now. `/harry-reload` re-reads the rules after you edit them. `/harry-status` toasts the harness path it found.
+`/harry` lints the working diff now. `/harry-reload` re-reads the rules after you edit them. `/harry-status` toasts the harness path it found. `/harry-update` reinstalls from the repo.
 
 `/commit` lints the staged diff, offers three subjects, and commits the one you pick.
 

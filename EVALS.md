@@ -68,19 +68,13 @@ They are read at import, so put them in your shell profile or a `direnv` entry. 
 
 ## Updating an install
 
-`opencode plugin update` does not work for a git spec — it reports `Plugin is not configured`, and the all-form says nothing is available even when the copy is stale. Re-adding reuses the cache, so it does not refresh either.
+Run `/harry-update`, then restart opencode. It removes the plugin, clears the cache, and re-adds it.
 
-Remove, drop the cache, re-add:
+`opencode plugin update` does not work for a git spec — it reports `Plugin is not configured`, and the all-form says nothing is available even when the copy is stale. Re-adding alone reuses the cache, so the cache has to go.
 
-```bash
-opencode plugin remove 'github:rchl2/harry'
-rm -rf ~/.cache/opencode/npm/git-harry-*
-npm_config_allow_git=all opencode plugin add 'github:rchl2/harry'
-```
+The command hardcodes `github:rchl2/harry`. On a fork, edit `update()` in `plugin/lib.ts`.
 
-The cache directory name contains a hash of the spec, so the wildcard only matches harry. Check the new path with `/harry-status` and confirm the timestamp changed.
-
-Restart opencode afterwards. The plugin module and the command list are cached per process, so an existing session keeps running the old code and `/harry-status` can appear to do nothing.
+Restarting matters: the plugin module and the command list are cached per process, so an existing session keeps running the old code.
 
 ## Agents
 
