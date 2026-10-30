@@ -6,6 +6,8 @@ export type LastUpdate = { message: string | null }
 export type Finding = { rule: string; file: string; line: number; message: string }
 export type Findings = { items: Finding[] }
 export type Reload = { rules: number }
+export type Prepare = { staged: boolean; findings: string; candidates: string[] }
+export type Apply = { message: string }
 
 export const Harry = Rpc.define({
   id: "harry",
@@ -45,6 +47,34 @@ export const Harry = Rpc.define({
           },
         },
         required: ["items"],
+      },
+    },
+    prepare: {
+      input: {
+        type: "object",
+        properties: { directory: { type: "string" }, message: { type: "string" } },
+        required: ["directory"],
+      },
+      output: {
+        type: "object",
+        properties: {
+          staged: { type: "boolean" },
+          findings: { type: "string" },
+          candidates: { type: "array", items: { type: "string" } },
+        },
+        required: ["staged", "findings", "candidates"],
+      },
+    },
+    apply: {
+      input: {
+        type: "object",
+        properties: { directory: { type: "string" }, message: { type: "string" } },
+        required: ["directory", "message"],
+      },
+      output: {
+        type: "object",
+        properties: { message: { type: "string" } },
+        required: ["message"],
       },
     },
     reload: {

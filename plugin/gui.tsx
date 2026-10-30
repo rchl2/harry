@@ -1,7 +1,7 @@
 import { For } from "solid-js"
 import { createStore } from "solid-js/store"
+import { Harry, type Apply, type Findings, type LastUpdate, type Prepare, type Reload, type Status } from "./rpc"
 import { Command, ComposerPill, createKeyed, Panel, Plugin, type MountedSession, type PanelTab } from "@opencode/plugin/gui"
-import { Harry, type Findings, type LastUpdate, type Reload, type Status } from "./rpc"
 
 export default Plugin.define({
   setup(ctx) {
@@ -37,7 +37,9 @@ export default Plugin.define({
       () => {
         const session = ctx.sessions.current()
         if (!session) return
+        
         void refresh(session.directory)
+
         // the listener is removed with this createKeyed run
         session.server.data.on("session.execution.succeeded", () => void refresh(session.directory))
       },
@@ -138,6 +140,59 @@ export default Plugin.define({
           })
         } catch (error) {
           ctx.toast.show({ title: "Harry", description: `Check failed: ${error}`, variant: "error", duration: 8000 })
+        }
+      },
+    }))
+
+    ctx.add(Command, (): Command => ({
+      id: "commit",
+      title: "Commit",
+      description: "Lint, suggest a message, and commit",
+      group: "Harry",
+      slash: { name: "commit", arguments: true },
+      run: async (input) => {
+        const session = ctx.sessions.current()
+        if (!session) return
+
+        const apply = async (message: string) => {
+          try {
+            await ctx.client.rpc(Harry).apply({ directory: session.directory, message })
+            ctx.toast.show({ title: "Harry", description: `Committed: ${message}`, variant: "success" })
+          } catch (error) {
+            ctx.toast.show({ title: "Harry", description: `Commit failed: ${error}`, variant: "error", duration: 8000 })
+          }
+        }
+
+        try {
+          const prep = (await ctx.client.rpc(Harry).prepare({
+            directory: session.directory,
+            message: input,
+          })) as Prepare
+
+          if (!prep.staged) {
+            ctx.toast.show({ title: "Harry", description: "Nothing staged.", variant: "default" })
+            return
+          }
+          if (prep.candidates.length === 0) {
+            ctx.toast.show({ title: "Harry", description: "Nothing to commit.", variant: "default" })
+            return
+          }
+          if (!prep.findings && input) {
+            await apply(input)
+            return
+          }
+
+          if (prep.findings) {
+            ctx.toast.show({ title: "Harry", description: prep.findings, variant: "error", duration: 8000 })
+          }
+
+          const picked = await ctx.dialogs.select({
+            title: "Commit message",
+            options: prep.candidates.map((candidate) => ({ title: candidate, value: candidate })),
+          })
+          if (picked) await apply(picked)
+        } catch (error) {
+          ctx.toast.show({ title: "Harry", description: `Commit failed: ${error}`, variant: "error", duration: 8000 })
         }
       },
     }))

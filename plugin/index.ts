@@ -67,6 +67,24 @@ export default Plugin.define({
 
     await ctx.rpc.register(Harry, {
       status: async () => ({ root: h.root, rules: rules ? rules.split("\n").length : 0 }),
+      prepare: async (input) => {
+        const { directory: dir, message } = input as { directory: string; message?: string }
+        const scoped = harness(dir, pluginDir)
+        const diff = await scoped.staged()
+        if (!diff.trim()) return { staged: false, findings: "", candidates: [] }
+
+        const lint = await scoped.lint(diff)
+        if (lint.clean && message) return { staged: true, findings: "", candidates: [message] }
+
+        const fixed = message ? await scoped.suggest(message) : ""
+        const candidates = await draft(diff, fixed || message || "")
+        return { staged: true, findings: lint.output, candidates }
+      },
+      apply: async (input) => {
+        const { directory: dir, message } = input as { directory: string; message: string }
+        await harness(dir, pluginDir).commit(message)
+        return { message }
+      },
       reload: async () => {
         rules = h.root ? await read(`${h.root}/rules/writing_styles.md`) : ""
         await loadSkill()
@@ -88,67 +106,6 @@ export default Plugin.define({
         await ctx.storage.set("update-result", { message })
         return { message }
       },
-    })
-
-    await ctx.command.transform((editor) => {
-      editor.add({
-        name: "commit",
-        description: "Lint, suggest a message, and commit. `/commit 2` takes suggestion 2",
-        execute: async ({ sessionID, prompt }) => {
-          const arg = prompt.text.trim()
-          const key = `commit:${sessionID}`
-
-          if (/^\d+$/.test(arg)) {
-            const stored = (await ctx.storage.get(key)) as string[] | undefined
-            const chosen = stored?.[Number(arg) - 1]
-            if (!chosen) {
-              await ctx.session.prompt({ sessionID, text: "No suggestion with that number. Run /commit again." })
-              return
-            }
-            await h.commit(chosen)
-            await ctx.storage.remove(key)
-            await ctx.session.prompt({ sessionID, text: `Committed: ${chosen}` })
-            return
-          }
-
-          const diff = await h.staged()
-          if (!diff.trim()) {
-            await ctx.session.prompt({ sessionID, text: "Nothing staged." })
-            return
-          }
-
-          const result = await h.lint(diff)
-          if (result.clean && arg) {
-            await h.commit(arg)
-            await ctx.session.prompt({ sessionID, text: `Committed: ${arg}` })
-            return
-          }
-
-          const fixed = arg ? await h.suggest(arg) : ""
-          const before = await ctx.session.get({ sessionID }).catch(() => null)
-          const candidates = await draft(diff, fixed || arg)
-          const after = await ctx.session.get({ sessionID }).catch(() => null)
-
-          const spent = before && after ? after.cost - before.cost : 0
-          const tokens = before && after
-            ? after.tokens.input + after.tokens.output - before.tokens.input - before.tokens.output
-            : 0
-          const meter = tokens > 0 ? `\n\n${tokens} tokens, $${spent.toFixed(4)}` : ""
-
-          if (result.clean && candidates[0]) {
-            await h.commit(candidates[0])
-            await ctx.session.prompt({ sessionID, text: `Committed: ${candidates[0]}${meter}` })
-            return
-          }
-
-          await ctx.storage.set(key, candidates)
-          const list = candidates.map((c, i) => `${i + 1}. ${c}`).join("\n")
-          await ctx.session.prompt({
-            sessionID,
-            text: `${result.output}\n\nPick one with /commit <n>:\n${list}${meter}`,
-          })
-        },
-      })
     })
 
     await ctx.tool.transform((editor) => {
