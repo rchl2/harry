@@ -1,5 +1,7 @@
 # Harry
 
+[![npm](https://img.shields.io/npm/v/opencode-harry)](https://www.npmjs.com/package/opencode-harry)
+
 A linter for the prose your coding agent writes: comments, commit messages, PR bodies, names, error messages.
 
 Agent output is often correct and unreadable. Harry checks it while you work, so reviewers spend their time on the logic instead of on `const data` and comments that repeat the code.
