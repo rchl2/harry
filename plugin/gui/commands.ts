@@ -1,7 +1,7 @@
+import { commitFlow } from "./commit"
 import { toItems, type State } from "./state"
 import { Command, type Context } from "@opencode/plugin/gui"
-import { Harry, type Findings, type Reload, type Status } from "../rpc"
-import { commitFlow } from "./commit"
+import { Harry, type Evaluate, type Findings, type Reload, type Status } from "../rpc"
 
 export function registerCommands(ctx: Context, state: State) {
   ctx.add(Command, () => ({
@@ -88,6 +88,55 @@ export function registerCommands(ctx: Context, state: State) {
     group: "Harry",
     slash: { name: "commit", arguments: true },
     run: async (input) => commitFlow(ctx, state, input),
+  }))
+
+  ctx.add(Command, () => ({
+    id: "goldens",
+    title: "Make goldens",
+    description: "Ask the agent to build a golden set from this project",
+    group: "Harry",
+    slash: { name: "harry-goldens" },
+    run: async () => {
+      const session = ctx.sessions.current()
+      if (!session) return
+      void ctx.client.session.prompt({
+        sessionID: session.id,
+        text:
+          "Build a golden set for this project with Harry. Run " +
+          "`python3 scripts/generate-goldens.py .` from the Harry checkout, then prune " +
+          "goldens.jsonl to about five tasks that cover different rules. Show me the list " +
+          "when you are done.",
+      })
+    },
+  }))
+
+  ctx.add(Command, () => ({
+    id: "eval",
+    title: "Run the goldens",
+    description: "Run every golden once and report pass and fail",
+    group: "Harry",
+    slash: { name: "harry-eval" },
+    run: async () => {
+      const running = ctx.toast.show({
+        title: "Harry",
+        description: "Running the goldens…",
+        variant: "loading",
+        persistent: true,
+      })
+      try {
+        const { message } = (await ctx.client.rpc(Harry).evaluate({})) as Evaluate
+        running.dismiss()
+        ctx.toast.show({
+          title: "Harry",
+          description: message,
+          variant: message.includes("failed") ? "error" : "success",
+          duration: 12000,
+        })
+      } catch (error) {
+        running.dismiss()
+        ctx.toast.show({ title: "Harry", description: `Eval failed: ${error}`, variant: "error", duration: 8000 })
+      }
+    },
   }))
 
   ctx.add(Command, () => ({

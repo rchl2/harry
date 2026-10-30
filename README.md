@@ -39,8 +39,12 @@ $ /harry
 
 ## Commands
 
-`/harry` lints now, without waiting for a turn. `/harry-status` shows whether it is loaded. `/harry-open` opens the rules. `/harry-reload` re-reads them after an edit. `/harry-update` reinstalls.
-
+`/harry` lints now, without waiting for a turn. 
+`/harry-status` shows whether it is loaded. 
+`/harry-open` opens the rules. 
+`/harry-reload` re-reads them after an edit. 
+`/harry-update` reinstalls.
+`/harry-goldens` builds a test set from this project. `/harry-eval` runs it. See [EVALS.md](EVALS.md).
 `/commit` lints the staged diff, offers three subjects, and commits the one you pick. Harry also offers this when a turn ends clean with something staged.
 
 ## Rules

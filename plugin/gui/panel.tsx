@@ -37,15 +37,12 @@ export function registerPanel(ctx: Context, state: State) {
 
     return (
       <box flexDirection="column" gap={1}>
-        <box flexDirection="row" justifyContent="space-between">
-          <text wrapMode="word">{open.length ? `${open.length} in these changes` : "No issues in these changes."}</text>
-          {open.length > 0 && (
-            <ctx.ui.Button variant="ghost" size="small" icon="prompt" onClick={ask}>
-              Ask agent to fix
-            </ctx.ui.Button>
-          )}
-        </box>
-        {open.length > 0 && <text wrapMode="word">Fixed on the next turn, or use the button.</text>}
+        <text wrapMode="word">{open.length ? `${open.length} in these changes` : "No issues in these changes."}</text>
+        {open.length > 0 && (
+          <ctx.ui.Button variant="neutral" size="small" icon="prompt" onClick={ask}>
+            Ask agent to fix
+          </ctx.ui.Button>
+        )}
         <For each={open}>{(item) => Row(ctx, { item, directory: props.session.directory })}</For>
         {done.length > 0 && <text>{`Fixed (${done.length})`}</text>}
         <For each={done}>{(item) => Row(ctx, { item, directory: props.session.directory })}</For>

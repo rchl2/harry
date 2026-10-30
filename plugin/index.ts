@@ -86,6 +86,7 @@ export default Plugin.define({
         await ctx.storage.remove("update-result")
         return { message: stored?.message ?? null }
       },
+      evaluate: async () => ({ message: await h.evaluate() }),
       update: async () => {
         const message = await h.update()
         await ctx.storage.set("update-result", { message })

@@ -53,7 +53,11 @@ def strip_generated(diff):
 
 
 def load_goldens(only=None):
-    rows = [json.loads(line) for line in (ROOT / "goldens.jsonl").read_text().splitlines() if line.strip()]
+    """Your generated set if there is one, else the shipped examples."""
+    path = ROOT / "goldens.jsonl"
+    if not path.exists():
+        path = ROOT / "examples" / "goldens.jsonl"
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
     return [r for r in rows if not only or r["id"] == only]
 
 def grade_bundle(bundle, rules=None, judged=True):
@@ -191,6 +195,7 @@ def main():
     parser.add_argument("--commit-msg", help="lint a commit message file")
     parser.add_argument("--calibrate", action="store_true")
     parser.add_argument("--task")
+    parser.add_argument("--all", action="store_true", help="run every golden")
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--json", action="store_true", help="print findings as JSON")
     parser.add_argument("--suggest", action="store_true", help="suggest a fixed commit subject")
@@ -229,7 +234,7 @@ def main():
             print_findings(result)
         sys.exit(0)
 
-    goldens = load_goldens(args.task)
+    goldens = load_goldens(None if args.all else args.task)
     if not goldens:
         sys.exit(f"no golden with id {args.task}")
 

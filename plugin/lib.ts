@@ -1,6 +1,7 @@
 import { tmpdir } from "node:os"
 import { existsSync } from "node:fs"
 import { join, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
 import { spawn } from "node:child_process"
 import { rm, writeFile } from "node:fs/promises"
 
@@ -36,6 +37,8 @@ export function locate(directory: string, pluginDir: string): string | null {
   }
   return null
 }
+
+const ROOT = fileURLToPath(new URL("..", import.meta.url))
 
 export function harness(directory: string, pluginDir: string) {
   const root = locate(directory, pluginDir)
@@ -87,6 +90,14 @@ export function harness(directory: string, pluginDir: string) {
     async staged(): Promise<string> {
       const { stdout } = await exec("git", ["diff", "--cached"], directory)
       return stdout
+    },
+
+    async evaluate(): Promise<string> {
+      const { stdout, stderr } = await exec("python3", [script, "--all", "--repeats", "1"], ROOT)
+      const lines = (stdout + stderr).trim().split("\n")
+      const passed = lines.filter((line) => line.includes(": pass")).length
+      const failed = lines.filter((line) => line.includes(": [")).length
+      return failed === 0 ? `${passed} passed.` : `${passed} passed, ${failed} failed.`
     },
 
     async update(): Promise<string> {

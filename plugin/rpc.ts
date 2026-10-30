@@ -3,6 +3,7 @@ import type { Rpc } from "@opencode/schema/rpc"
 export type Reload = { rules: number }
 export type Apply = { message: string }
 export type Update = { message: string }
+export type Evaluate = { message: string }
 export type Staged = { staged: boolean }
 export type Findings = { items: Finding[] }
 export type LastUpdate = { message: string | null }
@@ -120,6 +121,14 @@ export const Harry = {
       output: {
         type: "object",
         properties: { message: { type: ["string", "null"] } },
+        required: ["message"],
+      },
+    },
+    evaluate: {
+      input: { type: "object", properties: {}, additionalProperties: false },
+      output: {
+        type: "object",
+        properties: { message: { type: "string" } },
         required: ["message"],
       },
     },
