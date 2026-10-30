@@ -39,7 +39,7 @@ rules injected: yes
 
 ## What happens on its own
 
-When the agent finishes a turn, Harry lints the working diff. If anything is wrong it posts the findings into the session, and the agent fixes them before handing over. Three nags per turn, then it stops.
+When the agent finishes a turn, Harry lints the working diff — but only if that turn actually changed it. A question answered with no edits stays quiet. If anything is wrong it posts the findings into the session, and the agent fixes them before handing over. Three nags per turn, then it stops.
 
 Nothing blocks. If a finding is wrong, keep going and fix the rule later.
 
@@ -64,9 +64,11 @@ $ /harry
 
 ## Commands
 
-`/harry` lints the working diff now. `/harry-status` shows what the plugin found.
+`/harry` lints the working diff now. `/harry-status` shows what the plugin found. `/harry-reload` re-reads the rules after you edit them.
 
-`/commit` lints the staged diff, offers three subjects, and commits the one you pick:
+`/commit` lints the staged diff, offers three subjects, and commits the one you pick.
+
+Commit by hand with `git commit` and the message goes unchecked. Use `/commit` when you want it checked:
 
 ```
 $ /commit
@@ -79,7 +81,11 @@ Pick one with /commit <n>:
 
 $ /commit 1
 Committed: Add aircraft source
+
+3735 tokens, $0.0000
 ```
+
+The token line is the draft's own usage, so you can see what a picker costs.
 
 ## Rules
 

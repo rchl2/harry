@@ -17,7 +17,8 @@ export default Plugin.define({
     const inject = ctx.options.injectRules !== false
 
     const read = (path: string) => readFile(path, "utf8").catch(() => "")
-    const rules = h.root ? await read(`${h.root}/rules/writing_styles.md`) : ""
+    let rules = h.root ? await read(`${h.root}/rules/writing_styles.md`) : ""
+    let skillReg: { dispose: () => Promise<void> } | undefined
 
     if (rules && inject) {
       await ctx.session.hook("context", (event) => {
@@ -25,9 +26,12 @@ export default Plugin.define({
       })
     }
 
-    const skill = h.root ? await read(`${h.root}/SKILL.md`) : ""
-    if (skill) {
-      await ctx.skill.transform((editor) => {
+    async function loadSkill() {
+      await skillReg?.dispose()
+      skillReg = undefined
+      const skill = h.root ? await read(`${h.root}/SKILL.md`) : ""
+      if (!skill) return
+      skillReg = await ctx.skill.transform((editor) => {
         editor.add({
           id: Skill.ID.make("harry"),
           name: Skill.Name.make("harry"),
@@ -37,6 +41,8 @@ export default Plugin.define({
         })
       })
     }
+
+    await loadSkill()
 
     async function draft(diff: string, seed: string): Promise<string[]> {
       const out = seed ? [seed] : []
@@ -74,10 +80,28 @@ export default Plugin.define({
       })
 
       editor.add({
+        name: "harry-reload",
+        description: "Re-read the rules and skill from disk after editing them",
+        execute: async ({ sessionID }) => {
+          rules = h.root ? await read(`${h.root}/rules/writing_styles.md`) : ""
+          await loadSkill()
+          await ctx.session.synthetic({
+            sessionID,
+            text: rules ? `Reloaded ${rules.split("\n").length} lines of rules.` : "No rules found.",
+          })
+        },
+      })
+
+      editor.add({
         name: "harry",
         description: "Lint the working diff for prose problems",
         execute: async ({ sessionID }) => {
           const diff = await h.working()
+          if (!diff.trim()) {
+            await ctx.session.synthetic({ sessionID, text: "Nothing to check." })
+            return
+          }
+          await ctx.session.synthetic({ sessionID, text: "Checking…" })
           const result = await h.lint(diff)
           await ctx.session.synthetic({
             sessionID,
@@ -120,11 +144,19 @@ export default Plugin.define({
           }
 
           const fixed = arg ? await h.suggest(arg) : ""
+          const before = await ctx.session.get({ sessionID }).catch(() => null)
           const candidates = await draft(diff, fixed || arg)
+          const after = await ctx.session.get({ sessionID }).catch(() => null)
+
+          const spent = before && after ? after.cost - before.cost : 0
+          const tokens = before && after
+            ? after.tokens.input + after.tokens.output - before.tokens.input - before.tokens.output
+            : 0
+          const meter = tokens > 0 ? `\n\n${tokens} tokens, $${spent.toFixed(4)}` : ""
 
           if (result.clean && candidates[0]) {
             await h.commit(candidates[0])
-            await ctx.session.synthetic({ sessionID, text: `Committed: ${candidates[0]}` })
+            await ctx.session.synthetic({ sessionID, text: `Committed: ${candidates[0]}${meter}` })
             return
           }
 
@@ -132,7 +164,7 @@ export default Plugin.define({
           const list = candidates.map((c, i) => `${i + 1}. ${c}`).join("\n")
           await ctx.session.synthetic({
             sessionID,
-            text: `${result.output}\n\nPick one with /commit <n>:\n${list}`,
+            text: `${result.output}\n\nPick one with /commit <n>:\n${list}${meter}`,
           })
         },
       })
@@ -143,8 +175,10 @@ export default Plugin.define({
         name: "harry_check",
         description: "Lint the working diff for prose problems before handing work over",
         input: { type: "object", properties: {}, additionalProperties: false },
-        execute: async () => {
+        execute: async (_input, context) => {
           const diff = await h.working()
+          if (!diff.trim()) return { content: "Nothing to check." }
+          await context.progress({ status: "checking prose" })
           const result = await h.lint(diff)
           return { content: result.clean ? "Prose clean." : result.output }
         },
@@ -153,28 +187,34 @@ export default Plugin.define({
 
     if (ctx.options.autoCheck === false) return
 
-    const checked = new Map<string, string>()
+    const atTurnStart = new Map<string, string>()
     const nags = new Map<string, number>()
     const controller = new AbortController()
+
+    const hashOf = async () => {
+      const diff = await h.working().catch(() => "")
+      return diff.trim() ? createHash("sha1").update(diff).digest("hex") : ""
+    }
 
     void (async () => {
       for await (const event of ctx.event.subscribe({ signal: controller.signal })) {
         if (event.type === "session.inbox.delivered") {
-          nags.delete(event.data.sessionID)
+          const sessionID = event.data.sessionID
+          nags.delete(sessionID)
+          atTurnStart.set(sessionID, await hashOf())
           continue
         }
         if (event.type !== "session.execution.succeeded") continue
+
         const sessionID = event.data.sessionID
         if ((nags.get(sessionID) ?? 0) >= MAX_NAGS) continue
 
-        const diff = await h.working().catch(() => "")
-        if (!diff.trim()) continue
+        // only check when this turn changed the diff
+        const hash = await hashOf()
+        if (!hash || atTurnStart.get(sessionID) === hash) continue
+        atTurnStart.set(sessionID, hash)
 
-        const hash = createHash("sha1").update(diff).digest("hex")
-        if (checked.get(sessionID) === hash) continue
-        checked.set(sessionID, hash)
-
-        const result = await h.lint(diff).catch(() => null)
+        const result = await h.lint(await h.working().catch(() => "")).catch(() => null)
         if (!result || result.clean) continue
 
         nags.set(sessionID, (nags.get(sessionID) ?? 0) + 1)

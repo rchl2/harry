@@ -193,6 +193,9 @@ def main():
 
     if args.diff:
         text = sys.stdin.read() if args.diff == "-" else pathlib.Path(args.diff).read_text()
+        if not text.strip():
+            print("nothing to check")
+            sys.exit(0)
         result = grade_bundle({"diff": text}, judged=False)
 
         if result["pass"]:
