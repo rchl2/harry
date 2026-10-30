@@ -47,8 +47,13 @@ export default Plugin.define({
 
     const open = (session: MountedSession) => ctx.layout.open(`${ctx.id}:findings`, session)
 
-    // a draft is not routed yet; the server falls back to its own location when this is undefined
-    const currentDirectory = () => ctx.sessions.current()?.directory
+    // the routed session, else the tab on screen; undefined on a draft
+    const currentDirectory = () => {
+      const routed = ctx.sessions.current()?.directory
+      if (routed) return routed
+      const active = ctx.tabs.list().find((tab) => tab.active)?.session
+      return active?.location?.directory
+    }
 
     const Findings = (props: { session: MountedSession }) => (
       <box flexDirection="column" gap={1}>
@@ -136,7 +141,10 @@ export default Plugin.define({
           if (directory) setFindings(directory, items)
           ctx.toast.show({
             title: "Harry",
-            description: items.length === 0 ? "Prose clean." : `${items.length} finding${items.length === 1 ? "" : "s"}`,
+            description:
+              items.length === 0
+                ? `Prose clean.${directory ? "" : " (no directory)"}`
+                : `${items.length} finding${items.length === 1 ? "" : "s"}`,
             variant: items.length === 0 ? "success" : "error",
             duration: 6000,
           })
