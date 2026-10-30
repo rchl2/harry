@@ -15,7 +15,7 @@
   "include": [
     "plugin/index.ts",
     "plugin/lib.ts",
-    "plugin/gui.tsx",
+    "plugin/gui/index.tsx", "plugin/gui/state.ts", "plugin/gui/panel.tsx", "plugin/gui/pill.tsx", "plugin/gui/settings.tsx", "plugin/gui/commands.ts",
     "plugin/rpc.ts"
   ]
 }

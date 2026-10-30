@@ -1,11 +1,11 @@
-import { Harry } from "./rpc"
 import { harness } from "./lib"
-import { createHash } from "node:crypto"
+import { draft } from "./draft"
 import { fileURLToPath } from "node:url"
-import { readFile } from "node:fs/promises"
-import { Plugin, Skill } from "@opencode/plugin"
+import { Plugin } from "@opencode/plugin"
+import { createHash } from "node:crypto"
+import { read, skillLoader } from "./rules"
+import { Harry, type Settings } from "./rpc"
 
-const MAX_CANDIDATES = 3
 const MAX_NAGS = 3
 
 export default Plugin.define({
@@ -15,61 +15,35 @@ export default Plugin.define({
     const directory = ctx.location.directory
     const pluginDir = fileURLToPath(new URL(".", import.meta.url))
     const h = harness(directory, pluginDir)
-    const inject = ctx.options.injectRules !== false
-
-    const read = (path: string) => readFile(path, "utf8").catch(() => "")
-    let rules = h.root ? await read(`${h.root}/rules/writing_styles.md`) : ""
-    let skillReg: { dispose: () => Promise<void> } | undefined
-
-    if (rules && inject) {
-      await ctx.session.hook("context", (event) => {
-        event.system.push({ type: "text", text: rules })
-      })
+    const saved = (await ctx.storage.get("settings")) as Partial<Settings> | undefined
+    const settings: Settings = {
+      injectRules: saved?.injectRules ?? ctx.options.injectRules !== false,
+      autoCheck: saved?.autoCheck ?? ctx.options.autoCheck !== false,
     }
 
-    async function loadSkill() {
-      await skillReg?.dispose()
-      skillReg = undefined
-      const skill = h.root ? await read(`${h.root}/SKILL.md`) : ""
-      if (!skill) return
-      skillReg = await ctx.skill.transform((editor) => {
-        editor.add({
-          id: Skill.ID.make("harry"),
-          name: Skill.Name.make("harry"),
-          description: "Rules and a checker for the prose you ship with code",
-          path: Skill.Info.fields.path.make(`${h.root}/SKILL.md`),
-          content: skill,
-        })
+    let rules = h.root ? await read(`${h.root}/rules/writing_styles.md`) : ""
+    const loadSkill = skillLoader(ctx, h.root)
+
+    if (rules) {
+      await ctx.session.hook("context", (event) => {
+        if (!settings.injectRules) return
+        event.system.push({ type: "text", text: rules })
       })
     }
 
     await loadSkill()
 
-    async function draft(diff: string, seed: string): Promise<string[]> {
-      const out = seed ? [seed] : []
-      const selected = (await ctx.model.default()).data
-      if (!selected) return out
-
-      const { text } = await ctx.experimental.generate.text({
-        prompt:
-          "Write three commit subjects for this diff. Imperative mood, under " +
-          "fifty characters, no trailing period, no 'we'. One per line, no " +
-          "numbering, no fences.\n\n" + diff.slice(0, 2000),
-        model: { providerID: selected.providerID, id: selected.id },
-      })
-
-      for (const line of text.split("\n")) {
-        const subject = line.replace(/^\s*[-*\d.]+\)?\s*/, "").trim()
-        if (subject && subject.length <= 60 && !out.includes(subject)) out.push(subject)
-      }
-      return out.slice(0, MAX_CANDIDATES)
+    // the window may not know its directory yet; fall back to this plugin's location
+    const at = (input: unknown) => {
+      const { directory } = input as { directory?: string }
+      return harness(directory ?? ctx.location.directory, pluginDir)
     }
 
     await ctx.rpc.register(Harry, {
       status: async () => ({ root: h.root, rules: rules ? rules.split("\n").length : 0 }),
       prepare: async (input) => {
-        const { directory, message } = input as { directory?: string; message?: string }
-        const scoped = harness(directory ?? ctx.location.directory, pluginDir)
+        const { message } = input as { message?: string }
+        const scoped = at(input)
         const diff = await scoped.staged()
         if (!diff.trim()) return { staged: false, findings: "", candidates: [] }
 
@@ -77,13 +51,21 @@ export default Plugin.define({
         if (lint.clean && message) return { staged: true, findings: "", candidates: [message] }
 
         const fixed = message ? await scoped.suggest(message) : ""
-        const candidates = await draft(diff, fixed || message || "")
+        const candidates = await draft(ctx, diff, fixed || message || "")
         return { staged: true, findings: lint.output, candidates }
       },
       apply: async (input) => {
-        const { directory, message } = input as { directory?: string; message: string }
-        await harness(directory ?? ctx.location.directory, pluginDir).commit(message)
+        const { message } = input as { message: string }
+        await at(input).commit(message)
         return { message }
+      },
+      settings: async () => settings,
+      setSettings: async (input) => {
+        const patch = input as Partial<Settings>
+        if (typeof patch.injectRules === "boolean") settings.injectRules = patch.injectRules
+        if (typeof patch.autoCheck === "boolean") settings.autoCheck = patch.autoCheck
+        await ctx.storage.set("settings", settings)
+        return settings
       },
       reload: async () => {
         rules = h.root ? await read(`${h.root}/rules/writing_styles.md`) : ""
@@ -91,8 +73,7 @@ export default Plugin.define({
         return { rules: rules ? rules.split("\n").length : 0 }
       },
       findings: async (input) => {
-        const { directory } = input as { directory?: string }
-        const scoped = harness(directory ?? ctx.location.directory, pluginDir)
+        const scoped = at(input)
         const found = await scoped.findings(await scoped.working())
         return { items: found.map(({ rule, file, line, message }) => ({ rule, file, line, message })) }
       },
@@ -123,8 +104,6 @@ export default Plugin.define({
       })
     })
 
-    if (ctx.options.autoCheck === false) return
-
     const atTurnStart = new Map<string, string>()
     const nags = new Map<string, number>()
     const controller = new AbortController()
@@ -149,17 +128,19 @@ export default Plugin.define({
           continue
         }
         if (event.type !== "session.execution.succeeded") continue
+        if (!settings.autoCheck) continue
 
         const sessionID = event.data.sessionID
         if ((nags.get(sessionID) ?? 0) >= MAX_NAGS) continue
 
-        // only check when this turn changed the diff
-        const hash = await hashOf(sessionID)
+        // one diff per turn end: hash it, then lint the same text
+        const target = await scoped(sessionID)
+        const diff = await target.working().catch(() => "")
+        const hash = diff.trim() ? createHash("sha1").update(diff).digest("hex") : ""
         if (!hash || atTurnStart.get(sessionID) === hash) continue
         atTurnStart.set(sessionID, hash)
 
-        const target = await scoped(sessionID)
-        const checked = await target.lint(await target.working().catch(() => "")).catch(() => null)
+        const checked = await target.lint(diff).catch(() => null)
         if (!checked || checked.clean) continue
 
         nags.set(sessionID, (nags.get(sessionID) ?? 0) + 1)
