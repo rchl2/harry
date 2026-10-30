@@ -1,4 +1,4 @@
-import { Rpc } from "@opencode/schema/rpc"
+import type { Rpc } from "@opencode/schema/rpc"
 
 export type Status = { root: string | null; rules: number }
 export type Update = { message: string }
@@ -9,7 +9,7 @@ export type Reload = { rules: number }
 export type Prepare = { staged: boolean; findings: string; candidates: string[] }
 export type Apply = { message: string }
 
-export const Harry = Rpc.define({
+export const Harry = {
   id: "harry",
   methods: {
     status: {
@@ -103,4 +103,4 @@ export const Harry = Rpc.define({
     },
   },
   events: {},
-}) as unknown as Rpc.PortableDefinition
+} as unknown as Rpc.PortableDefinition
