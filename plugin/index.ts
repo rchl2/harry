@@ -90,24 +90,6 @@ export default Plugin.define({
 
     await ctx.command.transform((editor) => {
       editor.add({
-        name: "harry",
-        description: "Lint the working diff for prose problems",
-        execute: async ({ sessionID }) => {
-          const diff = await h.working()
-          if (!diff.trim()) {
-            await ctx.session.prompt({ sessionID, text: "Nothing to check." })
-            return
-          }
-          await ctx.session.synthetic({ sessionID, text: "Checking…" })
-          const result = await h.lint(diff)
-          await ctx.session.prompt({
-            sessionID,
-            text: result.clean ? "Prose clean." : result.output,
-          })
-        },
-      })
-
-      editor.add({
         name: "commit",
         description: "Lint, suggest a message, and commit. `/commit 2` takes suggestion 2",
         execute: async ({ sessionID, prompt }) => {

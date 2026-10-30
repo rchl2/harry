@@ -87,6 +87,30 @@ export default Plugin.define({
     }))
 
     ctx.add(Command, () => ({
+      id: "check",
+      title: "Check prose",
+      description: "Lint the working diff now",
+      group: "Harry",
+      slash: { name: "harry" },
+      run: async () => {
+        const session = ctx.sessions.current()
+        if (!session) return
+        try {
+          const { items } = (await ctx.client.rpc(Harry).findings({})) as Findings
+          setFindings(session.directory, items)
+          ctx.toast.show({
+            title: "Harry",
+            description: items.length === 0 ? "Prose clean." : `${items.length} finding${items.length === 1 ? "" : "s"}`,
+            variant: items.length === 0 ? "success" : "error",
+            duration: 6000,
+          })
+        } catch (error) {
+          ctx.toast.show({ title: "Harry", description: `Check failed: ${error}`, variant: "error", duration: 8000 })
+        }
+      },
+    }))
+
+    ctx.add(Command, () => ({
       id: "reload",
       title: "Reload harry rules",
       description: "Re-read the rules and skill from disk",
