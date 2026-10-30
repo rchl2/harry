@@ -39,17 +39,23 @@ $ /harry
 
 ## Commands
 
-`/harry` lints now, without waiting for a turn. 
-`/harry-status` shows whether it is loaded. 
-`/harry-open` opens the rules. 
-`/harry-reload` re-reads them after an edit. 
-`/harry-update` reinstalls.
-`/harry-goldens` builds a test set from this project. `/harry-eval` runs it. See [EVALS.md](EVALS.md).
-`/commit` lints the staged diff, offers three subjects, and commits the one you pick. Harry also offers this when a turn ends clean with something staged.
+- `/harry` lints now, without waiting for a turn.
+- `/harry-open` opens the rules, `/harry-reload` re-reads them after an edit.
+- `/commit` lints the staged diff, offers three subjects, and commits the one you pick. Harry also offers this when a turn ends clean with something staged.
+- `/harry-status` shows whether it is loaded, `/harry-update` reinstalls.
+- `/harry-goldens` builds a test set from this project, `/harry-eval` runs it. See [EVALS.md](EVALS.md).
 
 ## Rules
 
 `rules/writing_styles.md`. Edit them. Settings has a Harry section for turning injection and the automatic check off.
+
+The rules are global. Test sets are not: `/harry-goldens` writes `.harry/` in the project, so switching projects switches the set and never the rules.
+
+## Updating
+
+`/harry-update`, then restart. It removes the plugin, clears the cache, and re-adds it.
+
+`opencode plugin update` does not work for a git spec, and re-adding alone reuses the cache, so the command does both steps.
 
 ## Limits
 

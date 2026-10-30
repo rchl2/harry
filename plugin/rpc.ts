@@ -125,7 +125,10 @@ export const Harry = {
       },
     },
     evaluate: {
-      input: { type: "object", properties: {}, additionalProperties: false },
+      input: {
+        type: "object",
+        properties: { directory: { type: "string" } },
+      },
       output: {
         type: "object",
         properties: { message: { type: "string" } },

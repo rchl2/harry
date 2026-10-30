@@ -53,11 +53,20 @@ def strip_generated(diff):
 
 
 def load_goldens(only=None):
-    """Your generated set if there is one, else the shipped examples."""
-    path = ROOT / "goldens.jsonl"
-    if not path.exists():
-        path = ROOT / "examples" / "goldens.jsonl"
+    """The project's own set, else the shipped examples. `dir` is relative to the set."""
+    for path in (
+        pathlib.Path.cwd() / ".harry" / "goldens.jsonl",
+        ROOT / "goldens.jsonl",
+        ROOT / "examples" / "goldens.jsonl",
+    ):
+        if path.exists():
+            break
+    else:
+        sys.exit("no goldens. Run scripts/generate-goldens.py first.")
+
     rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    for row in rows:
+        row["_base"] = str(path.parent)
     return [r for r in rows if not only or r["id"] == only]
 
 def grade_bundle(bundle, rules=None, judged=True):
@@ -147,7 +156,7 @@ def execute(golden, repeats):
 
         try:
             subprocess.run(["git", "init", "--quiet"], cwd=workdir, check=True)
-            seed = ROOT / golden["dir"]
+            seed = pathlib.Path(golden["_base"]) / golden["dir"]
             for source in seed.rglob("*"):
                 if source.is_file():
                     target = workdir / source.relative_to(seed)
@@ -247,15 +256,15 @@ def main():
             "runs": execute(golden, args.repeats),
         }
 
-    out = ROOT / "runs" / f"{report['started'].replace(':', '')}.json"
+    out = pathlib.Path(goldens[0]["_base"]) / "runs" / f"{report['started'].replace(':', '')}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2))
-    prune_runs()
+    prune_runs(out.parent)
     print(f"\nwrote {out}")
 
-def prune_runs(keep=KEEP_RUNS):
+def prune_runs(directory, keep=KEEP_RUNS):
     """Runs carry whole diffs. Keep the newest few, drop the rest."""
-    runs = sorted((ROOT / "runs").glob("*.json"))
+    runs = sorted(directory.glob("*.json"))
 
     for old in runs[:-keep]:
         old.unlink(missing_ok=True)

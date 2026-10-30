@@ -86,7 +86,7 @@ export default Plugin.define({
         await ctx.storage.remove("update-result")
         return { message: stored?.message ?? null }
       },
-      evaluate: async () => ({ message: await h.evaluate() }),
+      evaluate: async (input) => ({ message: await h.evaluate((input as { directory?: string }).directory ?? ctx.location.directory) }),
       update: async () => {
         const message = await h.update()
         await ctx.storage.set("update-result", { message })

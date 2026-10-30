@@ -103,9 +103,9 @@ export function registerCommands(ctx: Context, state: State) {
         sessionID: session.id,
         text:
           "Build a golden set for this project with Harry. Run " +
-          "`python3 scripts/generate-goldens.py .` from the Harry checkout, then prune " +
-          "goldens.jsonl to about five tasks that cover different rules. Show me the list " +
-          "when you are done.",
+          "`python3 scripts/generate-goldens.py .` from the Harry checkout; it writes " +
+          "`.harry/` here. Prune `.harry/goldens.jsonl` to about five tasks that cover " +
+          "different rules. Show me the list when you are done.",
       })
     },
   }))
@@ -124,7 +124,9 @@ export function registerCommands(ctx: Context, state: State) {
         persistent: true,
       })
       try {
-        const { message } = (await ctx.client.rpc(Harry).evaluate({})) as Evaluate
+        const { message } = (await ctx.client.rpc(Harry).evaluate({
+          directory: state.currentDirectory(),
+        })) as Evaluate
         running.dismiss()
         ctx.toast.show({
           title: "Harry",

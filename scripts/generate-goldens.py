@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT))
 from graders import deterministic as det  # noqa: E402
 
 SOURCE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".php", ".py"}
-SKIP_DIRS = {"node_modules", "vendor", ".git", "dist", "build", "storage"}
+SKIP_DIRS = {"node_modules", "vendor", ".git", "dist", "build", "storage", ".harry"}
 MAX_PER_REPO = 4
 MAX_FILE_BYTES = 40_000
 
@@ -74,7 +74,8 @@ def main():
             sys.exit(f"{path} is not a git repo.")
         repos[path.name] = str(path)
 
-    shutil.rmtree(ROOT / "goldens", ignore_errors=True)
+    target = pathlib.Path.cwd() / ".harry"
+    shutil.rmtree(target / "goldens", ignore_errors=True)
     rows = []
 
     for name, raw in repos.items():
@@ -92,7 +93,7 @@ def main():
                     continue
                 rel = path.relative_to(repo)
                 gid = f"{name}-{rule}"
-                dest = ROOT / "goldens" / gid / rel
+                dest = target / "goldens" / gid / rel
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(path, dest)
                 rows.append({
@@ -108,7 +109,7 @@ def main():
 
         if bad_commits(repo) and made < MAX_PER_REPO:
             gid = f"{name}-commit"
-            dest = ROOT / "goldens" / gid
+            dest = target / "goldens" / gid
             dest.mkdir(parents=True, exist_ok=True)
             (dest / "README.md").write_text(f"# {name}\n")
             rows.append({
@@ -125,7 +126,7 @@ def main():
             if first is not None:
                 rel = first.relative_to(repo)
                 gid = f"{name}-narration"
-                dest = ROOT / "goldens" / gid / rel
+                dest = target / "goldens" / gid / rel
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(first, dest)
                 rows.append({
@@ -151,13 +152,13 @@ def main():
         "expected": EXPECTED["pr_body"],
     })
 
-    dest = ROOT / "goldens" / "pr-body"
+    dest = target / "goldens" / "pr-body"
     dest.mkdir(parents=True, exist_ok=True)
     (dest / "README.md").write_text("# notes\n")
 
-    (ROOT / "goldens.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    (target / "goldens.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
     baseline = {"results": {r["id"]: {"rule": r["rule"], "runs": []} for r in rows}}
-    (ROOT / "baseline.json").write_text(json.dumps(baseline, indent=2) + "\n")
+    (target / "baseline.json").write_text(json.dumps(baseline, indent=2) + "\n")
 
     print(f"\n{len(rows)} goldens from {len(repos)} repos. Prune what you do not want.")
     return 0

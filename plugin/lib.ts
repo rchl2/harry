@@ -92,8 +92,8 @@ export function harness(directory: string, pluginDir: string) {
       return stdout
     },
 
-    async evaluate(): Promise<string> {
-      const { stdout, stderr } = await exec("python3", [script, "--all", "--repeats", "1"], ROOT)
+    async evaluate(directory: string): Promise<string> {
+      const { stdout, stderr } = await exec("python3", [script, "--all", "--repeats", "1"], directory)
       const lines = (stdout + stderr).trim().split("\n")
       const passed = lines.filter((line) => line.includes(": pass")).length
       const failed = lines.filter((line) => line.includes(": [")).length

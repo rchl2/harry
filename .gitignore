@@ -32,3 +32,4 @@ Thumbs.db
 # logs
 *.log
 npm-debug.log*
+!examples/goldens.jsonl

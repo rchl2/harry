@@ -1,8 +1,8 @@
 # Testing the rules
 
-The rules are prompts. Editing one is a prompt edit, and a prompt edit can fix the case in front of you while breaking three others.
+The rules are prompts. Editing one can fix the case in front of you and break three others.
 
-This is the rig that tells you which. It runs an agent on a task, grades what it produced, and compares the result with the last run.
+This rig tells you which. It runs an agent on a task, grades what it produced, and compares the result with the last run.
 
 You need it when you edit `rules/writing_styles.md`. Not otherwise.
 
@@ -10,17 +10,21 @@ You need it when you edit `rules/writing_styles.md`. Not otherwise.
 
 A golden is a small repo with one known prose problem, the task that should fix it, and the answer you expect.
 
-`examples/` ships five, so the rig works on a fresh clone. They are generic — replace them with your own.
+`examples/` ships eleven, so the rig works on a fresh clone. They are generic — replace them with your own.
 
 ## Make your own
 
+Run this from the project root:
+
 ```bash
-python3 scripts/generate-goldens.py ../your-project
+python3 scripts/generate-goldens.py .
 ```
 
-It scans the repo for a real violation of each rule, copies the file into `goldens/<repo>-<rule>/`, and writes `goldens.jsonl` and `baseline.json`. All three are gitignored, and your set takes over from the examples.
+It scans for a real violation of each rule, copies the file into `.harry/goldens/`, and writes `.harry/goldens.jsonl` and `.harry/baseline.json`.
 
-The output is a starter. Prune it to about five, keep the ones that show different rules, and add the failures that actually reached a customer. Every `uwotm8` earns one.
+Your set takes over from the examples and stays with the project. Prune it to about five, keep the ones that show different rules, and add the failures that reached a customer. Every `uwotm8` earns one.
+
+`.harry/` is not ignored. Commit it to share a set with the team, or ignore it to keep your own.
 
 ## Run
 
@@ -30,12 +34,12 @@ python3 run.py --all --repeats 3
 
 Runs every golden three times in a throwaway repo and grades the diff, commit, PR body, and narration. Three runs because agent output varies. Slow and paid.
 
-`--task <id>` runs one.
+`--task <id>` runs one. Runs land in `.harry/runs/`, newest twenty kept.
 
 ## Compare
 
 ```bash
-python3 compare.py baseline.json runs/<file>.json
+python3 compare.py .harry/baseline.json .harry/runs/<file>.json
 ```
 
 Reports fixed, regressed, and flaky. A regression is a golden that always passed and now always fails. Gate on that, and only that.
@@ -43,10 +47,6 @@ Reports fixed, regressed, and flaky. A regression is a golden that always passed
 Read from the bottom up: still failing is the work list, the pass rate goes last.
 
 Change one rule per run. Read a failure before you rewrite the rule.
-
-## In opencode
-
-`/harry-goldens` asks the agent to build a set from the current project. `/harry-eval` runs the set once and reports the count.
 
 ## Calibrate
 
@@ -69,18 +69,6 @@ For an OpenAI-compatible endpoint instead, set `HARRY_JUDGE_URL`, `HARRY_JUDGE_K
 `adapters/opencode.sh` is the only adapter. The contract is three lines at the top: task in `$1`, run in the current directory, narration on stdout. Copy it and change the command.
 
 `HARRY_ADAPTER` picks the adapter by name. `HARRY_MODEL` passes a model through to it.
-
-## Updating
-
-`/harry-update`, then restart. It removes the plugin, clears the cache, and re-adds it.
-
-`opencode plugin update` does not work for a git spec, and re-adding alone reuses the cache. The command does both steps.
-
-## Layout
-
-The repo is the npm package. `exports` points at `plugin/index.ts`, and `files` ships the harness beside it, so the plugin resolves from its own package root.
-
-Resolution order is `HARRY_HARNESS`, then the project's `.harry/`, then the package root.
 
 ## Credit
 
