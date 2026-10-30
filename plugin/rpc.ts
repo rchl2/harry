@@ -7,6 +7,7 @@ export type Findings = { items: Finding[] }
 export type LastUpdate = { message: string | null }
 export type Status = { root: string | null; rules: number }
 export type Settings = { injectRules: boolean; autoCheck: boolean }
+export type Staged = { staged: boolean }
 export type Prepare = { staged: boolean; findings: string; candidates: string[] }
 export type Finding = { rule: string; file: string; line: number; message: string }
 
@@ -47,6 +48,17 @@ export const Harry = {
           },
         },
         required: ["items"],
+      },
+    },
+    staged: {
+      input: {
+        type: "object",
+        properties: { directory: { type: "string" } },
+      },
+      output: {
+        type: "object",
+        properties: { staged: { type: "boolean" } },
+        required: ["staged"],
       },
     },
     prepare: {

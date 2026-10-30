@@ -41,6 +41,10 @@ export default Plugin.define({
 
     await ctx.rpc.register(Harry, {
       status: async () => ({ root: h.root, rules: rules ? rules.split("\n").length : 0 }),
+      staged: async (input) => {
+        const diff = await at(input).staged()
+        return { staged: Boolean(diff.trim()) }
+      },
       prepare: async (input) => {
         const { message } = input as { message?: string }
         const scoped = at(input)

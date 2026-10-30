@@ -1,6 +1,7 @@
 import { toItems, type State } from "./state"
 import { Command, type Context } from "@opencode/plugin/gui"
-import { Harry, type Apply, type Findings, type Prepare, type Reload, type Status } from "../rpc"
+import { Harry, type Findings, type Reload, type Status } from "../rpc"
+import { commitFlow } from "./commit"
 
 export function registerCommands(ctx: Context, state: State) {
   ctx.add(Command, () => ({
@@ -48,18 +49,6 @@ export function registerCommands(ctx: Context, state: State) {
               : `${now.length} issue${now.length === 1 ? "" : "s"}. Open Harry above the chat to see them. Fixed on the next turn, or ask the agent now.`,
           variant: now.length === 0 ? "success" : "error",
           duration: 8000,
-          actions:
-            now.length && directory
-              ? [
-                  {
-                    label: "Open",
-                    run: () => {
-                      const session = ctx.sessions.current()
-                      if (session) state.open(session)
-                    },
-                  },
-                ]
-              : undefined,
         })
       } catch (error) {
         ctx.toast.show({ title: "Harry", description: `Check failed: ${error}`, variant: "error", duration: 8000 })
@@ -73,47 +62,7 @@ export function registerCommands(ctx: Context, state: State) {
     description: "Lint the staged diff, suggest a message, and commit",
     group: "Harry",
     slash: { name: "commit", arguments: true },
-    run: async (input) => {
-      const directory = state.currentDirectory()
-      ctx.toast.show({ title: "Harry", description: "Reading the staged diff…", variant: "loading", persistent: true })
-
-      const apply = async (message: string) => {
-        try {
-          await ctx.client.rpc(Harry).apply({ directory, message } as Apply & { directory?: string })
-          ctx.toast.show({ title: "Harry", description: `Committed: ${message}`, variant: "success" })
-        } catch (error) {
-          ctx.toast.show({ title: "Harry", description: `Commit failed: ${error}`, variant: "error", duration: 8000 })
-        }
-      }
-
-      try {
-        const prep = (await ctx.client.rpc(Harry).prepare({ directory, message: input })) as Prepare
-
-        if (!prep.staged) {
-          ctx.toast.show({ title: "Harry", description: "Nothing staged. Stage a change first.", variant: "default" })
-          return
-        }
-        if (prep.candidates.length === 0) {
-          ctx.toast.show({ title: "Harry", description: "Nothing to commit.", variant: "default" })
-          return
-        }
-        if (!prep.findings && input) {
-          await apply(input)
-          return
-        }
-        if (prep.findings) {
-          ctx.toast.show({ title: "Harry", description: prep.findings, variant: "error", duration: 8000 })
-        }
-
-        const picked = await ctx.dialogs.select({
-          title: "Pick a commit message",
-          options: prep.candidates.map((candidate) => ({ title: candidate, value: candidate })),
-        })
-        if (picked) await apply(picked)
-      } catch (error) {
-        ctx.toast.show({ title: "Harry", description: `Commit failed: ${error}`, variant: "error", duration: 8000 })
-      }
-    },
+    run: async (input) => commitFlow(ctx, state, input),
   }))
 
   ctx.add(Command, () => ({

@@ -10,7 +10,7 @@ export function registerPill(ctx: Context, state: State) {
       return {
         id: "findings",
         icon: "circle-exclamation",
-        label: `Harry found ${items.length} prose issue${items.length === 1 ? "" : "s"} with your changes`,
+        label: `Harry found ${items.length} prose issue${items.length === 1 ? "" : "s"}`,
         title: `${items.length} issue${items.length === 1 ? "" : "s"} in these changes. Open for details.`,
         rows: items.slice(0, 8).map((item, index) => ({
           id: `${index}`,

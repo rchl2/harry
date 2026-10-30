@@ -43,7 +43,7 @@ export function createState(ctx: Context) {
     return active?.location?.directory
   }
 
-  const refresh = async (directory: string, notify = false) => {
+  const refresh = async (directory: string, notify = false): Promise<Findings["items"] | null> => {
     try {
       const before = toItems(findings[directory])
       const { items } = (await ctx.client.rpc(Harry).findings({ directory })) as Findings
@@ -62,7 +62,7 @@ export function createState(ctx: Context) {
             : `Fixed ${resolved} issues. Prose is clean now.`,
           variant: "success",
         })
-        return
+        return now
       }
 
       if (notify && added > 0) {
@@ -77,8 +77,10 @@ export function createState(ctx: Context) {
           } }],
         })
       }
+      return now
     } catch {
       // server down; keep the last count
+      return null
     }
   }
 

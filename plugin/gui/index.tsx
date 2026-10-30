@@ -3,7 +3,8 @@ import { createState } from "./state"
 import { registerPanel } from "./panel"
 import { registerSettings } from "./settings"
 import { registerCommands } from "./commands"
-import { Harry, type LastUpdate } from "../rpc"
+import { Harry, type LastUpdate, type Staged } from "../rpc"
+import { commitFlow } from "./commit"
 import { createKeyed, Plugin } from "@opencode/plugin/gui"
 
 export default Plugin.define({
@@ -34,7 +35,21 @@ export default Plugin.define({
         if (!session) return
         void state.refresh(session.directory)
         // the listener is removed with this createKeyed run
-        session.server.data.on("session.execution.succeeded", () => void state.refresh(session.directory, true))
+        session.server.data.on("session.execution.succeeded", async () => {
+          const items = await state.refresh(session.directory, true)
+          if (!items || items.length > 0) return
+
+          const { staged } = (await ctx.client.rpc(Harry).staged({ directory: session.directory })) as Staged
+          if (!staged) return
+
+          ctx.toast.show({
+            title: "Harry",
+            description: "No issues. Ready to commit.",
+            variant: "success",
+            duration: 10000,
+            actions: [{ label: "Commit", run: () => void commitFlow(ctx, state) }],
+          })
+        })
       },
     )
 
