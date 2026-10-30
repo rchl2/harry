@@ -67,6 +67,10 @@ export default Plugin.define({
 
     await ctx.rpc.register(Harry, {
       status: async () => ({ root: h.root, rules: rules ? rules.split("\n").length : 0 }),
+      findings: async () => {
+        const found = await h.findings(await h.working())
+        return { items: found.map(({ rule, line, message }) => ({ rule, line, message })) }
+      },
       lastUpdate: async () => {
         const stored = (await ctx.storage.get("update-result")) as { message: string } | undefined
         await ctx.storage.remove("update-result")

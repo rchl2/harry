@@ -1,5 +1,6 @@
-import { Command, Plugin } from "@opencode/plugin/gui"
-import { Harry, type LastUpdate, type Status } from "./rpc"
+import { createStore } from "solid-js/store"
+import { Command, ComposerPill, createKeyed, Plugin } from "@opencode/plugin/gui"
+import { Harry, type Findings, type LastUpdate, type Status } from "./rpc"
 
 export default Plugin.define({
   setup(ctx) {
@@ -18,6 +19,47 @@ export default Plugin.define({
         })
       })
       .catch(() => {})
+
+    const [findings, setFindings] = createStore<Record<string, Findings["items"]>>({})
+
+    const refresh = async (directory: string) => {
+      try {
+        const { items } = (await ctx.client.rpc(Harry).findings({})) as Findings
+        setFindings(directory, items)
+      } catch {
+        // server down; keep the last count
+      }
+    }
+
+    createKeyed(
+      () => ctx.sessions.current()?.key,
+      () => {
+        const session = ctx.sessions.current()
+        if (!session) return
+        void refresh(session.directory)
+        // the listener is removed with this createKeyed run
+        session.server.data.on("session.execution.succeeded", () => void refresh(session.directory))
+      },
+    )
+
+    ctx.add(ComposerPill, {
+      id: "findings",
+      show: (input) => {
+        const items = findings[input.session.directory] ?? []
+        if (items.length === 0) return undefined
+        return {
+          id: "findings",
+          icon: "circle-exclamation",
+          label: `${items.length}`,
+          title: "Prose findings",
+          rows: items.slice(0, 8).map((item, index) => ({
+            id: `${index}`,
+            label: item.message,
+            detail: `${item.rule} · line ${item.line}`,
+          })),
+        }
+      },
+    })
 
     ctx.add(Command, () => ({
       id: "status",
@@ -59,5 +101,6 @@ export default Plugin.define({
         }
       },
     }))
+
   },
 })

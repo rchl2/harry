@@ -3,6 +3,8 @@ import { Rpc } from "@opencode/plugin/rpc"
 export type Status = { root: string | null; rules: number }
 export type Update = { message: string }
 export type LastUpdate = { message: string | null }
+export type Finding = { rule: string; line: number; message: string }
+export type Findings = { items: Finding[] }
 
 export const Harry = Rpc.define({
   id: "harry",
@@ -16,6 +18,27 @@ export const Harry = Rpc.define({
           rules: { type: "number" },
         },
         required: ["root", "rules"],
+      },
+    },
+    findings: {
+      input: { type: "object", properties: {}, additionalProperties: false },
+      output: {
+        type: "object",
+        properties: {
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                rule: { type: "string" },
+                line: { type: "number" },
+                message: { type: "string" },
+              },
+              required: ["rule", "line", "message"],
+            },
+          },
+        },
+        required: ["items"],
       },
     },
     lastUpdate: {

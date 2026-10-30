@@ -5,6 +5,7 @@ import { spawn } from "node:child_process"
 import { rm, writeFile } from "node:fs/promises"
 
 export type Lint = { clean: boolean; output: string }
+export type Finding = { rule: string; line: number; message: string; excerpt: string }
 
 function exec(command: string, args: string[], cwd: string, stdin?: string) {
   return new Promise<{ code: number; stdout: string; stderr: string }>((resolve) => {
@@ -51,6 +52,16 @@ export function harness(directory: string, pluginDir: string) {
       const { stdout } = await exec("python3", [script, "--diff", "-"], directory, diff)
       const output = stdout.trim()
       return { clean: output === "clean", output }
+    },
+
+    async findings(diff: string): Promise<Finding[]> {
+      if (!root) return []
+      const { stdout } = await exec("python3", [script, "--diff", "-", "--json"], directory, diff)
+      try {
+        return JSON.parse(stdout) as Finding[]
+      } catch {
+        return []
+      }
     },
 
     async suggest(message: string): Promise<string> {

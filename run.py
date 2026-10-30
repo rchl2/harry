@@ -171,6 +171,7 @@ def main():
     parser.add_argument("--task")
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--strict", action="store_true", help="exit 1 on findings")
+    parser.add_argument("--json", action="store_true", help="print findings as JSON")
     parser.add_argument("--suggest", action="store_true", help="suggest a fixed commit subject")
     args = parser.parse_args()
 
@@ -194,11 +195,13 @@ def main():
     if args.diff:
         text = sys.stdin.read() if args.diff == "-" else pathlib.Path(args.diff).read_text()
         if not text.strip():
-            print("nothing to check")
+            print("[]" if args.json else "nothing to check")
             sys.exit(0)
         result = grade_bundle({"diff": text}, judged=False)
 
-        if result["pass"]:
+        if args.json:
+            print(json.dumps(result["findings"]))
+        elif result["pass"]:
             print("clean")
         else:
             print_findings(result)
