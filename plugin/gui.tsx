@@ -38,10 +38,13 @@ export default Plugin.define({
         ctx.toast.show({ title: "Harry", description: "Reinstalling…", variant: "loading", persistent: true })
         try {
           const { message } = (await ctx.client.rpc(Harry).update({})) as Update
+          const failed = !message.startsWith("Updated")
+          // the update reloads this window, so a toast alone would vanish with it - let's use attention
+          void ctx.attention.notify({ title: "Harry", message, variant: failed ? "error" : "default" })
           ctx.toast.show({
             title: "Harry",
             description: message,
-            variant: message.startsWith("Updated") ? "success" : "error",
+            variant: failed ? "error" : "success",
             duration: 8000,
           })
         } catch (error) {
