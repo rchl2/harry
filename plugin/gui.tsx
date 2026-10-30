@@ -44,21 +44,45 @@ export default Plugin.define({
     const [findings, setFindings] = createStore<Record<string, Findings["items"]>>({})
     const [fixed, setFixed] = createStore<Record<string, Findings["items"]>>({})
 
-    const refresh = async (directory: string) => {
+    const same = (left: Findings["items"][number], right: Findings["items"][number]) =>
+      left.rule === right.rule && left.file === right.file && left.line === right.line
+
+    const refresh = async (directory: string, notify = false) => {
       try {
-        const before = findings[directory] ?? []
+        const before = toItems(findings[directory])
         const { items } = (await ctx.client.rpc(Harry).findings({ directory })) as Findings
-        const fixed = before.filter(
-          (old) => !items.some((now) => now.rule === old.rule && now.file === old.file && now.line === old.line),
-        ).length
-        setFindings(directory, toItems(items))
+        const now = toItems(items)
+        const fixed = before.filter((old) => !now.some((entry) => same(entry, old))).length
+        const added = now.filter((entry) => !before.some((old) => same(entry, old))).length
+
+        setFindings(directory, now)
+
         if (fixed > 0) {
           ctx.toast.show({
             title: "Harry",
-            description: items.length
-              ? `Fixed ${fixed}, ${items.length} issues left.`
+            description: now.length
+              ? `Fixed ${fixed}, ${now.length} issues left.`
               : `Fixed ${fixed} issues. Prose is clean now.`,
             variant: "success",
+          })
+          return
+        }
+
+        if (notify && added > 0) {
+          ctx.toast.show({
+            title: "Harry",
+            description: `${now.length} issue${now.length === 1 ? "" : "s"}. Open Harry above the chat.`,
+            variant: "error",
+            duration: 8000,
+            actions: [
+              {
+                label: "Open",
+                run: () => {
+                  const session = ctx.sessions.current()
+                  if (session) open(session)
+                },
+              },
+            ],
           })
         }
       } catch {
@@ -75,7 +99,7 @@ export default Plugin.define({
         void refresh(session.directory)
 
         // the listener is removed with this createKeyed run
-        session.server.data.on("session.execution.succeeded", () => void refresh(session.directory))
+        session.server.data.on("session.execution.succeeded", () => void refresh(session.directory, true))
       },
     )
 
