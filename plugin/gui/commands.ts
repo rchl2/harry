@@ -97,16 +97,12 @@ export function registerCommands(ctx: Context, state: State) {
     group: "Harry",
     slash: { name: "harry-goldens" },
     run: async () => {
-      const session = ctx.sessions.current()
-      if (!session) return
-      void ctx.client.session.prompt({
-        sessionID: session.id,
-        text:
+      state.askAgent(
           "Build a golden set for this project with Harry. Run " +
           "`python3 scripts/generate-goldens.py .` from the Harry checkout; it writes " +
           "`.harry/` here. Prune `.harry/goldens.jsonl` to about five tasks that cover " +
           "different rules. Show me the list when you are done.",
-      })
+      )
     },
   }))
 

@@ -84,6 +84,21 @@ export function createState(ctx: Context) {
     }
   }
 
+  /** Send a prompt to the agent, or say why there is nowhere to send it. */
+  const askAgent = (text: string) => {
+    const session = ctx.sessions.current()
+    if (session) {
+      void ctx.client.session.prompt({ sessionID: session.id, text })
+      return
+    }
+    ctx.toast.show({
+      title: "Harry",
+      description: "Send a message first, then run this again.",
+      variant: "default",
+      duration: 6000,
+    })
+  }
+
   const loadSettings = () => {
     void ctx.client
       .rpc(Harry)
@@ -101,5 +116,5 @@ export function createState(ctx: Context) {
     }
   }
 
-  return { findings, fixed, settings, open, currentDirectory, refresh, loadSettings, save }
+  return { findings, fixed, settings, open, currentDirectory, refresh, loadSettings, save, askAgent }
 }
