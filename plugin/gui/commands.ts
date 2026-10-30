@@ -98,10 +98,10 @@ export function registerCommands(ctx: Context, state: State) {
     slash: { name: "harry-goldens" },
     run: async () => {
       state.askAgent(
-          "Build a golden set for this project with Harry. Run " +
-          "`python3 scripts/generate-goldens.py .` from the Harry checkout; it writes " +
-          "`.harry/` here. Prune `.harry/goldens.jsonl` to about five tasks that cover " +
-          "different rules. Show me the list when you are done.",
+          "Build a golden set for this project with Harry. From the Harry checkout, run " +
+          "`python3 scripts/generate-goldens.py <this project's absolute path>`. It writes " +
+          "`.harry/` inside that project. Prune `.harry/goldens.jsonl` to about five tasks " +
+          "that cover different rules. Show me the list when you are done.",
       )
     },
   }))

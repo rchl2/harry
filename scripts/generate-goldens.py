@@ -74,7 +74,8 @@ def main():
             sys.exit(f"{path} is not a git repo.")
         repos[path.name] = str(path)
 
-    target = pathlib.Path.cwd() / ".harry"
+    # the set belongs to the project, not to wherever the script was run from
+    target = pathlib.Path(next(iter(repos.values()))) / ".harry"
     shutil.rmtree(target / "goldens", ignore_errors=True)
     rows = []
 

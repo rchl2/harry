@@ -33,3 +33,4 @@ Thumbs.db
 *.log
 npm-debug.log*
 !examples/goldens.jsonl
+.harry/
