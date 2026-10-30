@@ -51,7 +51,7 @@ export default Plugin.define({
         const fixed = before.filter(
           (old) => !items.some((now) => now.rule === old.rule && now.file === old.file && now.line === old.line),
         ).length
-        setFindings(directory, items)
+        setFindings(directory, toItems(items))
         if (fixed > 0) {
           ctx.toast.show({
             title: "Harry",
@@ -98,7 +98,7 @@ export default Plugin.define({
           onMouseDown={() => ctx.system.openExternal(`file://${props.directory}/${item.file}#L${item.line}`)}
         >
           <text>{item.rule}</text>
-          <text>{item.message}</text>
+          <text wrapMode="word">{item.message}</text>
           <text>
             {item.file}:{item.line}
           </text>
@@ -112,8 +112,8 @@ export default Plugin.define({
 
       return (
         <box flexDirection="column" gap={1}>
-          <text>{open.length ? `${open.length} in these changes` : "No issues in these changes."}</text>
-          {open.length > 0 && <text>Fixed on the next turn, or ask the agent now.</text>}
+          <text wrapMode="word">{open.length ? `${open.length} in these changes` : "No issues in these changes."}</text>
+          {open.length > 0 && <text wrapMode="word">Fixed on the next turn, or ask the agent now.</text>}
           <For each={open}>{(item) => <Row item={item} directory={props.session.directory} />}</For>
           {done.length > 0 && <text>{`Fixed (${done.length})`}</text>}
           <For each={done}>{(item) => <Row item={item} directory={props.session.directory} />}</For>
@@ -136,7 +136,7 @@ export default Plugin.define({
         return {
           id: "findings",
           icon: "circle-exclamation",
-          label: `Harry found ${items.length} issue${items.length === 1 ? "" : "s"}`,
+          label: `Harry found ${items.length} prose issue${items.length === 1 ? "" : "s"} with your changes`,
           title: `${items.length} issue${items.length === 1 ? "" : "s"} in these changes. Open for details.`,
           rows: items.slice(0, 8).map((item, index) => ({
             id: `${index}`,
@@ -183,7 +183,7 @@ export default Plugin.define({
         const directory = currentDirectory()
         try {
           const { items } = (await ctx.client.rpc(Harry).findings({ directory })) as Findings
-          if (directory) setFindings(directory, items)
+          if (directory) setFindings(directory, toItems(items))
           ctx.toast.show({
             title: "Harry",
             description:
