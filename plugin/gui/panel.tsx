@@ -39,9 +39,9 @@ export function registerPanel(ctx: Context, state: State) {
       <box flexDirection="column" gap={1}>
         <text wrapMode="word">{open.length ? `${open.length} in these changes` : "No issues in these changes."}</text>
         {open.length > 0 && (
-          <ctx.ui.Button variant="neutral" size="small" icon="prompt" onClick={ask}>
-            Ask agent to fix
-          </ctx.ui.Button>
+          <box border paddingLeft={1} paddingRight={1} onMouseDown={ask}>
+            <text>Ask agent to fix</text>
+          </box>
         )}
         <For each={open}>{(item) => Row(ctx, { item, directory: props.session.directory })}</For>
         {done.length > 0 && <text>{`Fixed (${done.length})`}</text>}
