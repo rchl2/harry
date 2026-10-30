@@ -1,8 +1,8 @@
-import { createHash } from "node:crypto"
-import { readFile } from "node:fs/promises"
-import { fileURLToPath } from "node:url"
-import { Plugin, Skill } from "@opencode/plugin"
 import { harness } from "./lib"
+import { createHash } from "node:crypto"
+import { fileURLToPath } from "node:url"
+import { readFile } from "node:fs/promises"
+import { Plugin, Skill } from "@opencode/plugin"
 
 const MAX_CANDIDATES = 3
 const MAX_NAGS = 3

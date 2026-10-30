@@ -1,8 +1,8 @@
-import { spawn } from "node:child_process"
-import { existsSync } from "node:fs"
-import { rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
+import { existsSync } from "node:fs"
 import { join, resolve } from "node:path"
+import { spawn } from "node:child_process"
+import { rm, writeFile } from "node:fs/promises"
 
 export type Lint = { clean: boolean; output: string }
 
@@ -11,16 +11,17 @@ function exec(command: string, args: string[], cwd: string, stdin?: string) {
     const child = spawn(command, args, { cwd })
     let stdout = ""
     let stderr = ""
+
     child.stdout.on("data", (chunk) => (stdout += chunk))
     child.stderr.on("data", (chunk) => (stderr += chunk))
     child.on("error", (error) => resolve({ code: -1, stdout, stderr: String(error) }))
     child.on("close", (code) => resolve({ code: code ?? -1, stdout, stderr }))
+
     if (stdin !== undefined) child.stdin.end(stdin)
     else child.stdin.end()
   })
 }
 
-/** Where the harness lives. Project copy wins, then the package root. */
 export function locate(directory: string, pluginDir: string): string | null {
   const candidates = [
     process.env.HARRY_HARNESS,
@@ -43,9 +44,10 @@ export function harness(directory: string, pluginDir: string) {
     root,
 
     async lint(diff: string): Promise<Lint> {
-      if (!root) {
+      if (! root) {
         return { clean: false, output: "harry not found. Set HARRY_HARNESS or vendor it." }
       }
+
       const { stdout } = await exec("python3", [script, "--diff", "-"], directory, diff)
       const output = stdout.trim()
       return { clean: output === "clean", output }

@@ -9,10 +9,18 @@ It runs inside opencode. The rules go into every request, so the agent writes to
 Needs Python 3.11 or newer.
 
 ```bash
-opencode plugin add 'github:<you>/harry'
+opencode plugin add 'github:rchl2/harry'
 ```
 
-`<you>` is the GitHub account or org that hosts your fork. If you cloned it locally instead, point the config at the directory:
+If you forked it, swap `rchl2` for your account.
+
+If npm refuses with `Fetching packages of type "git" have been disabled`, your npm config sets `allow-git`. Override it:
+
+```bash
+npm_config_allow_git=all opencode plugin add 'github:rchl2/harry'
+```
+
+If you cloned it locally instead, point the config at the directory:
 
 ```jsonc
 { "plugins": ["/Users/you/harry"] }
@@ -85,7 +93,7 @@ Rule injection costs about 900 tokens on every request. The automatic check is t
 {
   "plugins": [
     {
-      "package": "github:<you>/harry",
+      "package": "github:rchl2/harry",
       "options": { "injectRules": false, "autoCheck": false }
     }
   ]

@@ -52,17 +52,19 @@ Change one rule per run. Read a failure before you rewrite the rule.
 
 Four rules need reading rather than matching: why-not-what, restate, segmentation, and `what?` recovery.
 
-They run through the opencode CLI, so they use the model and credentials you already have. Nothing to configure. `HARRY_JUDGE_MODEL` picks a different model.
+They run through the opencode CLI, so they use the model and credentials you already have. Nothing to configure.
 
-To use an OpenAI-compatible endpoint instead, set three variables:
+Only set the variables below if judging has to go somewhere else — a different provider, a cheaper model, or CI:
 
 ```bash
 export HARRY_JUDGE_URL="https://api.example.com/v1/chat/completions"
-export HARRY_JUDGE_KEY_FILE="$HOME/.secrets/judge-key"
+export HARRY_JUDGE_KEY="sk-..."
 export HARRY_JUDGE_MODEL="some-model"
 ```
 
-The key file holds the bare key, nothing else. Without either path the judged rules pass and say so.
+`HARRY_JUDGE_KEY_FILE` works instead of `HARRY_JUDGE_KEY` if you keep keys in files. `HARRY_JUDGE_MODEL` is optional.
+
+They are read at import, so put them in your shell profile or a `direnv` entry. Without either path the judged rules pass and say so.
 
 ## Agents
 

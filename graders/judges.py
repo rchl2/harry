@@ -13,10 +13,11 @@ import subprocess
 import tempfile
 import urllib.request
 
-# Only used when HARRY_JUDGE_URL is set.
+# Only used when HARRY_JUDGE_URL is set. The key is inline, or a file holding it.
 ENDPOINT = os.environ.get("HARRY_JUDGE_URL")
 MODEL = os.environ.get("HARRY_JUDGE_MODEL")
-KEY_FILE = pathlib.Path(os.environ.get("HARRY_JUDGE_KEY_FILE", "~/.secrets/explabs-key")).expanduser()
+KEY = os.environ.get("HARRY_JUDGE_KEY")
+KEY_FILE = os.environ.get("HARRY_JUDGE_KEY_FILE")
 
 SYSTEM = (
     "You grade prose that ships with code. Return JSON only: "
@@ -52,12 +53,15 @@ RULES = {
 }
 
 def _key():
-    return KEY_FILE.read_text().strip()
+    if KEY:
+        return KEY
+    return pathlib.Path(KEY_FILE).expanduser().read_text().strip()
+
 
 def available():
     """Judging needs either an endpoint with a key, or the opencode CLI."""
     if ENDPOINT:
-        return KEY_FILE.exists()
+        return bool(KEY) or bool(KEY_FILE and pathlib.Path(KEY_FILE).expanduser().exists())
     return shutil.which("opencode") is not None
 
 
