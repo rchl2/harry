@@ -21,6 +21,18 @@ export default Plugin.define({
       })
       .catch(() => {})
 
+    // the RPC returns an array, but a stringified payload must not break the panel
+    const toItems = (value: unknown): Findings["items"] => {
+      if (Array.isArray(value)) return value as Findings["items"]
+      if (typeof value !== "string") return []
+      try {
+        const parsed = JSON.parse(value)
+        return Array.isArray(parsed) ? parsed : []
+      } catch {
+        return []
+      }
+    }
+
     const [findings, setFindings] = createStore<Record<string, Findings["items"]>>({})
     const [fixed, setFixed] = createStore<Record<string, Findings["items"]>>({})
 
@@ -69,36 +81,37 @@ export default Plugin.define({
       return active?.location?.directory
     }
 
-    const Row = (props: { item: Findings["items"][number]; directory: string }) => (
-      <box
-        flexDirection="column"
-        onMouseDown={() =>
-          ctx.system.openExternal(`file://${props.directory}/${props.item.file}#L${props.item.line}`)
-        }
-      >
-        <text>{props.item.rule}</text>
-        <text>{props.item.message}</text>
-        <text>
-          {props.item.file}:{props.item.line}
-        </text>
-      </box>
-    )
+    const Row = (props: { item: Findings["items"][number] | string; directory: string }) => {
+      const item = props.item
+      if (typeof item === "string") return <text>{item}</text>
+      return (
+        <box
+          flexDirection="column"
+          onMouseDown={() => ctx.system.openExternal(`file://${props.directory}/${item.file}#L${item.line}`)}
+        >
+          <text>{item.rule}</text>
+          <text>{item.message}</text>
+          <text>
+            {item.file}:{item.line}
+          </text>
+        </box>
+      )
+    }
 
-    const Findings = (props: { session: MountedSession }) => (
-      <box flexDirection="column" gap={1}>
-        <For each={findings[props.session.directory] ?? []}>
-          {(item) => <Row item={item} directory={props.session.directory} />}
-        </For>
-        <For each={fixed[props.session.directory] ?? []}>
-          {(item) => (
-            <box flexDirection="column">
-              <text>fixed</text>
-              <Row item={item} directory={props.session.directory} />
-            </box>
-          )}
-        </For>
-      </box>
-    )
+    const Findings = (props: { session: MountedSession }) => {
+      const open = toItems(findings[props.session.directory])
+      const done = toItems(fixed[props.session.directory])
+
+      return (
+        <box flexDirection="column" gap={1}>
+          <text>{open.length ? `${open.length} in these changes` : "No issues in these changes."}</text>
+          {open.length > 0 && <text>Fixed on the next turn, or ask the agent now.</text>}
+          <For each={open}>{(item) => <Row item={item} directory={props.session.directory} />}</For>
+          {done.length > 0 && <text>{`Fixed (${done.length})`}</text>}
+          <For each={done}>{(item) => <Row item={item} directory={props.session.directory} />}</For>
+        </box>
+      )
+    }
 
     ctx.add(Panel, {
       id: "findings",
@@ -110,13 +123,13 @@ export default Plugin.define({
     ctx.add(ComposerPill, {
       id: "findings",
       show: (input) => {
-        const items = findings[input.session.directory] ?? []
+        const items = toItems(findings[input.session.directory])
         if (items.length === 0) return undefined
         return {
           id: "findings",
           icon: "circle-exclamation",
-          label: `Harry: ${items.length} issue${items.length === 1 ? "" : "s"}`,
-          title: `Harry found ${items.length} issue${items.length === 1 ? "" : "s"} in these changes`,
+          label: `Harry found ${items.length} issue${items.length === 1 ? "" : "s"}`,
+          title: `${items.length} issue${items.length === 1 ? "" : "s"} in these changes. Open for details.`,
           rows: items.slice(0, 8).map((item, index) => ({
             id: `${index}`,
             label: item.message,
@@ -130,7 +143,7 @@ export default Plugin.define({
     ctx.add(Command, () => ({
       id: "status",
       title: "Harry status",
-      description: "Show whether harry found the harness active.",
+      description: "Show whether harry is loaded in this window.",
       group: "Harry",
       slash: { name: "harry-status" },
       run: async () => {
@@ -138,10 +151,10 @@ export default Plugin.define({
           const status = (await ctx.client.rpc(Harry).status({})) as Status
           ctx.toast.show(
             status.root
-              ? { title: "Harry", description: "Loaded. The rules are in every request from now on.", variant: "success" }
+              ? { title: "Harry", description: "Loaded. The rules are in every request.", variant: "success" }
               : {
                   title: "Harry",
-                  description: "Harness not found. Set HARRY_HARNESS to the folder holding run.py.",
+                  description: "Not loaded. Set HARRY_HARNESS to the folder holding run.py.",
                   variant: "error",
                   duration: 8000,
                 },
@@ -155,7 +168,7 @@ export default Plugin.define({
     ctx.add(Command, () => ({
       id: "check",
       title: "Check prose",
-      description: "Lint the working diff now",
+      description: "Lint now, without waiting for a turn",
       group: "Harry",
       slash: { name: "harry" },
       run: async () => {
@@ -167,8 +180,8 @@ export default Plugin.define({
             title: "Harry",
             description:
               items.length === 0
-                ? `Prose is clean.${directory ? "" : " (no directory)"}`
-                : `${items.length} finding${items.length === 1 ? "" : "s"}. Open Harry above chat window to see them.`,
+                ? `No issues in these changes.${directory ? "" : " (no directory)"}`
+                : `${items.length} issue${items.length === 1 ? "" : "s"}. Open Harry above the chat to see them. Fixed on the next turn, or ask the agent now.`,
             variant: items.length === 0 ? "success" : "error",
             duration: 8000,
             actions:
@@ -193,11 +206,12 @@ export default Plugin.define({
     ctx.add(Command, (): Command => ({
       id: "commit",
       title: "Commit",
-      description: "Lint, suggest a message, and commit",
+      description: "Lint the staged diff, suggest a message, and commit",
       group: "Harry",
       slash: { name: "commit", arguments: true },
       run: async (input) => {
         const directory = currentDirectory()
+        ctx.toast.show({ title: "Harry", description: "Reading the staged diff…", variant: "loading", persistent: true })
 
         const apply = async (message: string) => {
           try {
@@ -212,7 +226,7 @@ export default Plugin.define({
           const prep = (await ctx.client.rpc(Harry).prepare({ directory, message: input })) as Prepare
 
           if (!prep.staged) {
-            ctx.toast.show({ title: "Harry", description: "Nothing staged.", variant: "default" })
+            ctx.toast.show({ title: "Harry", description: "Nothing staged. Stage a change first.", variant: "default" })
             return
           }
           if (prep.candidates.length === 0) {
@@ -229,7 +243,7 @@ export default Plugin.define({
           }
 
           const picked = await ctx.dialogs.select({
-            title: "Commit message",
+            title: "Pick a commit message",
             options: prep.candidates.map((candidate) => ({ title: candidate, value: candidate })),
           })
           if (picked) await apply(picked)
@@ -242,7 +256,7 @@ export default Plugin.define({
     ctx.add(Command, () => ({
       id: "reload",
       title: "Reload harry rules",
-      description: "Re-read the rules and skill from disk",
+      description: "Re-read the rules after editing them",
       group: "Harry",
       slash: { name: "harry-reload" },
       run: async () => {
