@@ -3,7 +3,7 @@ import { Rpc } from "@opencode/plugin/rpc"
 export type Status = { root: string | null; rules: number }
 export type Update = { message: string }
 export type LastUpdate = { message: string | null }
-export type Finding = { rule: string; line: number; message: string }
+export type Finding = { rule: string; file: string; line: number; message: string }
 export type Findings = { items: Finding[] }
 export type Reload = { rules: number }
 
@@ -22,7 +22,11 @@ export const Harry = Rpc.define({
       },
     },
     findings: {
-      input: { type: "object", properties: {}, additionalProperties: false },
+      input: {
+        type: "object",
+        properties: { directory: { type: "string" } },
+        required: ["directory"],
+      },
       output: {
         type: "object",
         properties: {
@@ -32,10 +36,11 @@ export const Harry = Rpc.define({
               type: "object",
               properties: {
                 rule: { type: "string" },
+                file: { type: "string" },
                 line: { type: "number" },
                 message: { type: "string" },
               },
-              required: ["rule", "line", "message"],
+              required: ["rule", "file", "line", "message"],
             },
           },
         },

@@ -5,7 +5,7 @@ import { spawn } from "node:child_process"
 import { rm, writeFile } from "node:fs/promises"
 
 export type Lint = { clean: boolean; output: string }
-export type Finding = { rule: string; line: number; message: string; excerpt: string }
+export type Finding = { rule: string; file: string; line: number; message: string; excerpt: string }
 
 function exec(command: string, args: string[], cwd: string, stdin?: string) {
   return new Promise<{ code: number; stdout: string; stderr: string }>((resolve) => {

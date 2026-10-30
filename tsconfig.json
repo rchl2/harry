@@ -6,7 +6,17 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ],
+    "jsx": "preserve",
+    "jsxImportSource": "@opentui/solid"
   },
-  "include": ["plugin/index.ts", "plugin/lib.ts", "plugin/tui.ts"]
+  "include": [
+    "plugin/index.ts",
+    "plugin/lib.ts",
+    "plugin/tui.ts",
+    "plugin/gui.tsx",
+    "plugin/rpc.ts"
+  ]
 }

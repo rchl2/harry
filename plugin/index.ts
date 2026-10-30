@@ -72,9 +72,11 @@ export default Plugin.define({
         await loadSkill()
         return { rules: rules ? rules.split("\n").length : 0 }
       },
-      findings: async () => {
-        const found = await h.findings(await h.working())
-        return { items: found.map(({ rule, line, message }) => ({ rule, line, message })) }
+      findings: async (input) => {
+        const { directory } = input as { directory: string }
+        const scoped = harness(directory, pluginDir)
+        const found = await scoped.findings(await scoped.working())
+        return { items: found.map(({ rule, file, line, message }) => ({ rule, file, line, message })) }
       },
       lastUpdate: async () => {
         const stored = (await ctx.storage.get("update-result")) as { message: string } | undefined
@@ -170,8 +172,14 @@ export default Plugin.define({
     const nags = new Map<string, number>()
     const controller = new AbortController()
 
-    const hashOf = async () => {
-      const diff = await h.working().catch(() => "")
+    // a global install is bound to the home directory, so scope every check to the session
+    const scoped = async (sessionID: string) => {
+      const session = await ctx.session.get({ sessionID }).catch(() => null)
+      return harness(session?.location.directory ?? directory, pluginDir)
+    }
+
+    const hashOf = async (sessionID: string) => {
+      const diff = await (await scoped(sessionID)).working().catch(() => "")
       return diff.trim() ? createHash("sha1").update(diff).digest("hex") : ""
     }
 
@@ -180,7 +188,7 @@ export default Plugin.define({
         if (event.type === "session.inbox.delivered") {
           const sessionID = event.data.sessionID
           nags.delete(sessionID)
-          atTurnStart.set(sessionID, await hashOf())
+          atTurnStart.set(sessionID, await hashOf(sessionID))
           continue
         }
         if (event.type !== "session.execution.succeeded") continue
@@ -189,16 +197,17 @@ export default Plugin.define({
         if ((nags.get(sessionID) ?? 0) >= MAX_NAGS) continue
 
         // only check when this turn changed the diff
-        const hash = await hashOf()
+        const hash = await hashOf(sessionID)
         if (!hash || atTurnStart.get(sessionID) === hash) continue
         atTurnStart.set(sessionID, hash)
 
-        const result = await h.lint(await h.working().catch(() => "")).catch(() => null)
-        if (!result || result.clean) continue
+        const target = await scoped(sessionID)
+        const checked = await target.lint(await target.working().catch(() => "")).catch(() => null)
+        if (!checked || checked.clean) continue
 
         nags.set(sessionID, (nags.get(sessionID) ?? 0) + 1)
         await ctx.session
-          .synthetic({ sessionID, text: `Prose check:\n${result.output}` })
+          .synthetic({ sessionID, text: `Prose check:\n${checked.output}` })
           .catch(() => {})
       }
     })()

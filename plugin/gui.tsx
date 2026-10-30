@@ -1,5 +1,6 @@
+import { For } from "solid-js"
 import { createStore } from "solid-js/store"
-import { Command, ComposerPill, createKeyed, Plugin } from "@opencode/plugin/gui"
+import { Command, ComposerPill, createKeyed, Panel, Plugin, type MountedSession, type PanelTab } from "@opencode/plugin/gui"
 import { Harry, type Findings, type LastUpdate, type Reload, type Status } from "./rpc"
 
 export default Plugin.define({
@@ -24,7 +25,7 @@ export default Plugin.define({
 
     const refresh = async (directory: string) => {
       try {
-        const { items } = (await ctx.client.rpc(Harry).findings({})) as Findings
+        const { items } = (await ctx.client.rpc(Harry).findings({ directory })) as Findings
         setFindings(directory, items)
       } catch {
         // server down; keep the last count
@@ -42,6 +43,36 @@ export default Plugin.define({
       },
     )
 
+    const open = (session: MountedSession) => ctx.layout.open(`${ctx.id}:findings`, session)
+
+    const Findings = (props: { session: MountedSession }) => (
+      <box flexDirection="column" gap={1}>
+        <For each={findings[props.session.directory] ?? []}>
+          {(item) => (
+            <box
+              flexDirection="column"
+              onMouseDown={() =>
+                ctx.system.openExternal(`file://${props.session.directory}/${item.file}#L${item.line}`)
+              }
+            >
+              <text>{item.rule}</text>
+              <text>{item.message}</text>
+              <text>
+                {item.file}:{item.line}
+              </text>
+            </box>
+          )}
+        </For>
+      </box>
+    )
+
+    ctx.add(Panel, {
+      id: "findings",
+      region: "side",
+      list: (): PanelTab[] => [{ id: "findings", title: "Harry", closable: "compact" }],
+      render: (props) => <Findings session={props.session} />,
+    })
+
     ctx.add(ComposerPill, {
       id: "findings",
       show: (input) => {
@@ -55,7 +86,8 @@ export default Plugin.define({
           rows: items.slice(0, 8).map((item, index) => ({
             id: `${index}`,
             label: item.message,
-            detail: `${item.rule} · line ${item.line}`,
+            detail: `${item.rule} · ${item.file}:${item.line}`,
+            run: () => open(input.session),
           })),
         }
       },
@@ -96,7 +128,7 @@ export default Plugin.define({
         const session = ctx.sessions.current()
         if (!session) return
         try {
-          const { items } = (await ctx.client.rpc(Harry).findings({})) as Findings
+          const { items } = (await ctx.client.rpc(Harry).findings({ directory: session.directory })) as Findings
           setFindings(session.directory, items)
           ctx.toast.show({
             title: "Harry",

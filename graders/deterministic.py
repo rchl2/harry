@@ -67,102 +67,119 @@ UNITS = {
     "gb", "px", "pct", "percent",
 }
 
-def _finding(rule, line, message, excerpt=""):
-    return {"rule": rule, "line": line, "message": message, "excerpt": excerpt.strip()[:160]}
+def _finding(rule, path, line, message, excerpt=""):
+    return {
+        "rule": rule,
+        "file": path,
+        "line": line,
+        "message": message,
+        "excerpt": excerpt.strip()[:160],
+    }
 
 def _sentences(text):
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
 
 def _added_lines(diff):
-    n = 0
+    """Yield (file, new-file line number, text) for added lines only."""
+    path = ""
+    number = 0
     for raw in diff.splitlines():
-        if raw.startswith("+++") or raw.startswith("---"):
+        if raw.startswith("+++ "):
+            path = raw[4:].strip()
+            if path.startswith("b/"):
+                path = path[2:]
+            continue
+        if raw.startswith("--- "):
+            continue
+        if raw.startswith("@@"):
+            found = re.search(r"\+(\d+)", raw)
+            number = int(found.group(1)) if found else 0
             continue
         if raw.startswith("+"):
-            n += 1
-            yield n, raw[1:]
+            yield path, number, raw[1:]
+            number += 1
         elif not raw.startswith("-"):
-            n += 1
+            number += 1
 
 
 def comment_detritus(bundle):
     out = []
-    for n, line in _added_lines(bundle.get("diff", "")):
-        m = COMMENT.match(line)
+    for path, number, text in _added_lines(bundle.get("diff", "")):
+        m = COMMENT.match(text)
 
         if not m:
             continue
         body = m.group(2)
 
         if DETRITUS.search(body):
-            out.append(_finding("comment_detritus", n, "history, not state. Say what is true now.", body))
+            out.append(_finding("comment_detritus", path, number, "history, not state. Say what is true now.", body))
     return out
 
 def comment_restates(bundle):
     out = []
     lines = list(_added_lines(bundle.get("diff", "")))
-    for i, (n, line) in enumerate(lines[:-1]):
-        m = COMMENT.match(line)
+    for i, (path, number, text) in enumerate(lines[:-1]):
+        m = COMMENT.match(text)
         if not m:
             continue
         body = m.group(2).strip()
 
         if len(body.split()) < 2 or WHY.search(body):
             continue
-        window = " ".join(text for _, text in lines[i + 1:i + 3]).lower()
+        window = " ".join(t for _, _, t in lines[i + 1:i + 3]).lower()
         words = {w for w in re.findall(r"[a-z]{3,}", body.lower()) if w not in STOP}
 
         if len(words) < 2:
             continue
 
         if sum(1 for w in words if w in window) / len(words) >= 0.7:
-            out.append(_finding("comment_restates", n, "the code already says this. Delete it or add why.", body))
+            out.append(_finding("comment_restates", path, number, "the code already says this. Delete it or add why.", body))
     return out
 
 def commented_out_code(bundle):
     out = []
-    for n, line in _added_lines(bundle.get("diff", "")):
-        m = COMMENT.match(line)
+    for path, number, text in _added_lines(bundle.get("diff", "")):
+        m = COMMENT.match(text)
 
         if not m:
             continue
         body = m.group(2).strip()
 
         if re.search(r"[;{}]\s*$", body) or re.match(r"^(const|let|var|return|if|for|await)\b", body):
-            out.append(_finding("commented_out_code", n, "dead code in a comment.", body))
+            out.append(_finding("commented_out_code", path, number, "dead code in a comment.", body))
     return out
 
 def name_pronoun(bundle):
     out = []
-    for n, line in _added_lines(bundle.get("diff", "")):
-        if re.search(r"\bfor\s*\(", line):
+    for path, number, text in _added_lines(bundle.get("diff", "")):
+        if re.search(r"\bfor\s*\(", text):
             continue  # a loop binding is scoped to three lines; `item` is fine
 
-        for m in CODE_DECL.finditer(line):
+        for m in CODE_DECL.finditer(text):
             name = m.group(2)
             if name.lower() not in VAGUE_NAMES:
                 continue
 
             # `res.json()` and friends read fine when the call names the thing
-            if re.search(rf"\b{name}\.(json|ok|status|data|text)\b", line):
+            if re.search(rf"\b{name}\.(json|ok|status|data|text)\b", text):
                 continue
 
-            out.append(_finding("name_pronoun", n, f"`{name}` is a pronoun. Name what it holds.", line))
+            out.append(_finding("name_pronoun", path, number, f"`{name}` is a pronoun. Name what it holds.", text))
     return out
 
 def error_message(bundle):
     out = []
-    for n, line in _added_lines(bundle.get("diff", "")):
-        for m in THROW.finditer(line):
+    for path, number, text in _added_lines(bundle.get("diff", "")):
+        for m in THROW.finditer(text):
             msg = m.group(1)
 
             if ": " not in msg:
-                out.append(_finding("error_message", n, "no next action. Use `code: what happened, what to do`.", msg))
+                out.append(_finding("error_message", path, number, "no next action. Use `code: what happened, what to do`.", msg))
                 continue
 
             tail = msg.split(": ", 1)[1]
             if len(tail.split()) < 3:
-                out.append(_finding("error_message", n, "the part after the code does not say what to do.", msg))
+                out.append(_finding("error_message", path, number, "the part after the code does not say what to do.", msg))
     return out
 
 def ste_procedure(bundle):
@@ -171,14 +188,14 @@ def ste_procedure(bundle):
     for n, para in enumerate(text.split("\n\n")):
         for s in _sentences(para):
             if len(s.split()) > 20:
-                out.append(_finding("ste_procedure", n, "over twenty words. Split it.", s))
+                out.append(_finding("ste_procedure", "", n, "over twenty words. Split it.", s))
 
             if PASSIVE.search(s):
-                out.append(_finding("ste_procedure", n, "passive voice. Use the actor.", s))
+                out.append(_finding("ste_procedure", "", n, "passive voice. Use the actor.", s))
             banned = [w for w in BANNED_STE_KEYWORDS if re.search(rf"\b{w}\b", s, re.I)]
             
             if banned:
-                out.append(_finding("ste_procedure", n, f"`{banned[0]}` has a plainer word.", s))
+                out.append(_finding("ste_procedure", "", n, f"`{banned[0]}` has a plainer word.", s))
     return out
 
 def commit_subject(bundle):
@@ -189,19 +206,19 @@ def commit_subject(bundle):
     subject = bundle.get("commit", "").splitlines()[0] if bundle.get("commit") else ""
 
     if not subject:
-        return [_finding("commit_subject", 0, "no commit message captured.")]
+        return [_finding("commit_subject", "", 0, "no commit message captured.")]
 
     if len(subject) > 50:
-        out.append(_finding("commit_subject", 0, f"{len(subject)} chars. Cut to fifty.", subject))
+        out.append(_finding("commit_subject", "", 0, f"{len(subject)} chars. Cut to fifty.", subject))
 
     if subject.endswith("."):
-        out.append(_finding("commit_subject", 0, "no trailing period.", subject))
+        out.append(_finding("commit_subject", "", 0, "no trailing period.", subject))
 
     if PAST_TENSE.search(subject):
-        out.append(_finding("commit_subject", 0, "past tense. Use the imperative.", subject))
+        out.append(_finding("commit_subject", "", 0, "past tense. Use the imperative.", subject))
 
     if re.search(r"\bwe\b", subject, re.I):
-        out.append(_finding("commit_subject", 0, "drop `we`.", subject))
+        out.append(_finding("commit_subject", "", 0, "drop `we`.", subject))
     return out
 
 def intent_first(bundle):
@@ -215,21 +232,21 @@ def intent_first(bundle):
         head = " ".join(_sentences(text)[:2])
 
         if not GOAL.search(head):
-            out.append(_finding("intent_first", 0, f"{surface} opens without a goal or problem.", head))
+            out.append(_finding("intent_first", "", 0, f"{surface} opens without a goal or problem.", head))
     return out
 
 def todo_bare(bundle):
     """A TODO must say who owns it or when it lifts."""
     out = []
-    for n, line in _added_lines(bundle.get("diff", "")):
-        m = COMMENT.match(line)
+    for path, number, text in _added_lines(bundle.get("diff", "")):
+        m = COMMENT.match(text)
 
         if not m:
             continue
         body = m.group(2).strip()
 
         if TODO.search(body) and not TODO_OK.search(body):
-            out.append(_finding("todo_bare", n, "a bare TODO says nothing. Use `TODO(name)` or `TODO: when X`.", body))
+            out.append(_finding("todo_bare", path, number, "a bare TODO says nothing. Use `TODO(name)` or `TODO: when X`.", body))
     return out
 
 
@@ -238,28 +255,28 @@ def empty_catch(bundle):
     out = []
     lines = list(_added_lines(bundle.get("diff", "")))
 
-    for i, (n, line) in enumerate(lines):
-        m = EMPTY_CATCH.search(line)
+    for i, (path, number, text) in enumerate(lines):
+        m = EMPTY_CATCH.search(text)
 
         if not m:
             continue
-        rest = line[m.end():].strip()
+        rest = text[m.end():].strip()
 
         if rest.startswith("}"):
-            out.append(_finding("empty_catch", n, "swallows the error. Say why, or rethrow.", line))
+            out.append(_finding("empty_catch", path, number, "swallows the error. Say why, or rethrow.", text))
             continue
 
-        if rest == "" and i + 1 < len(lines) and lines[i + 1][1].strip() == "}":
-            out.append(_finding("empty_catch", n, "swallows the error. Say why, or rethrow.", line))
+        if rest == "" and i + 1 < len(lines) and lines[i + 1][2].strip() == "}":
+            out.append(_finding("empty_catch", path, number, "swallows the error. Say why, or rethrow.", text))
     return out
 
 
 def unit_in_name(bundle):
     """A quantity without a unit is a bug waiting for a reader."""
     out = []
-    for n, line in _added_lines(bundle.get("diff", "")):
-        names = [m.group(2) for m in CODE_DECL.finditer(line)]
-        names += [m.group(1) for m in PHP_DECL.finditer(line)]
+    for path, number, text in _added_lines(bundle.get("diff", "")):
+        names = [m.group(2) for m in CODE_DECL.finditer(text)]
+        names += [m.group(1) for m in PHP_DECL.finditer(text)]
 
         for name in names:
             parts = re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])|\d+", name)
@@ -269,7 +286,7 @@ def unit_in_name(bundle):
             last = parts[-1].lower()
 
             if last in UNITLESS:
-                out.append(_finding("unit_in_name", n, f"`{name}` has no unit. Say ms, bytes, or days.", line))
+                out.append(_finding("unit_in_name", path, number, f"`{name}` has no unit. Say ms, bytes, or days.", text))
     return out
 
 

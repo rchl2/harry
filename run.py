@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -29,6 +30,27 @@ import graders.judges as judges  # noqa: E402
 
 RULES = sorted(set(det.DETERMINISTIC) | set(judges.RULES))
 KEEP_RUNS = 20
+
+GENERATED = re.compile(
+    r"(^|/)(dist|build|node_modules|vendor|coverage)/"
+    r"|\.min\."
+    r"|(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$"
+    r"|\.snap$"
+)
+
+
+def strip_generated(diff):
+    """Drop hunks for build output and lockfiles; they are not written by hand."""
+    out = []
+    keep = True
+    for line in diff.splitlines():
+        if line.startswith("diff --git "):
+            path = line.split(" b/", 1)[-1]
+            keep = not GENERATED.search(path)
+        if keep:
+            out.append(line)
+    return "\n".join(out)
+
 
 def load_goldens(only=None):
     rows = [json.loads(line) for line in (ROOT / "goldens.jsonl").read_text().splitlines() if line.strip()]
@@ -194,6 +216,7 @@ def main():
 
     if args.diff:
         text = sys.stdin.read() if args.diff == "-" else pathlib.Path(args.diff).read_text()
+        text = strip_generated(text)
         if not text.strip():
             print("[]" if args.json else "nothing to check")
             sys.exit(0)
