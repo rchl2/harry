@@ -80,6 +80,8 @@ npm_config_allow_git=all opencode plugin add 'github:rchl2/harry'
 
 The cache directory name contains a hash of the spec, so the wildcard only matches harry. Check the new path with `/harry-status` and confirm the timestamp changed.
 
+Restart opencode afterwards. The plugin module and the command list are cached per process, so an existing session keeps running the old code and `/harry-status` can appear to do nothing.
+
 ## Agents
 
 `adapters/opencode.sh` is the only adapter. The contract is three lines at the top of the file: task in `$1`, run in the current directory, narration on stdout. Copy it and change the command.

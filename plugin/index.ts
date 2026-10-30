@@ -75,7 +75,7 @@ export default Plugin.define({
             `found: ${h.root ? "yes" : "no"}`,
             `rules injected: ${rules && inject ? "yes" : "no"}`,
           ]
-          await ctx.session.synthetic({ sessionID, text: lines.join("\n") })
+          await ctx.session.prompt({ sessionID, text: lines.join("\n") })
         },
       })
 
@@ -85,7 +85,7 @@ export default Plugin.define({
         execute: async ({ sessionID }) => {
           rules = h.root ? await read(`${h.root}/rules/writing_styles.md`) : ""
           await loadSkill()
-          await ctx.session.synthetic({
+          await ctx.session.prompt({
             sessionID,
             text: rules ? `Reloaded ${rules.split("\n").length} lines of rules.` : "No rules found.",
           })
@@ -98,12 +98,12 @@ export default Plugin.define({
         execute: async ({ sessionID }) => {
           const diff = await h.working()
           if (!diff.trim()) {
-            await ctx.session.synthetic({ sessionID, text: "Nothing to check." })
+            await ctx.session.prompt({ sessionID, text: "Nothing to check." })
             return
           }
           await ctx.session.synthetic({ sessionID, text: "Checking…" })
           const result = await h.lint(diff)
-          await ctx.session.synthetic({
+          await ctx.session.prompt({
             sessionID,
             text: result.clean ? "Prose clean." : result.output,
           })
@@ -121,25 +121,25 @@ export default Plugin.define({
             const stored = (await ctx.storage.get(key)) as string[] | undefined
             const chosen = stored?.[Number(arg) - 1]
             if (!chosen) {
-              await ctx.session.synthetic({ sessionID, text: "No suggestion with that number. Run /commit again." })
+              await ctx.session.prompt({ sessionID, text: "No suggestion with that number. Run /commit again." })
               return
             }
             await h.commit(chosen)
             await ctx.storage.remove(key)
-            await ctx.session.synthetic({ sessionID, text: `Committed: ${chosen}` })
+            await ctx.session.prompt({ sessionID, text: `Committed: ${chosen}` })
             return
           }
 
           const diff = await h.staged()
           if (!diff.trim()) {
-            await ctx.session.synthetic({ sessionID, text: "Nothing staged." })
+            await ctx.session.prompt({ sessionID, text: "Nothing staged." })
             return
           }
 
           const result = await h.lint(diff)
           if (result.clean && arg) {
             await h.commit(arg)
-            await ctx.session.synthetic({ sessionID, text: `Committed: ${arg}` })
+            await ctx.session.prompt({ sessionID, text: `Committed: ${arg}` })
             return
           }
 
@@ -156,13 +156,13 @@ export default Plugin.define({
 
           if (result.clean && candidates[0]) {
             await h.commit(candidates[0])
-            await ctx.session.synthetic({ sessionID, text: `Committed: ${candidates[0]}${meter}` })
+            await ctx.session.prompt({ sessionID, text: `Committed: ${candidates[0]}${meter}` })
             return
           }
 
           await ctx.storage.set(key, candidates)
           const list = candidates.map((c, i) => `${i + 1}. ${c}`).join("\n")
-          await ctx.session.synthetic({
+          await ctx.session.prompt({
             sessionID,
             text: `${result.output}\n\nPick one with /commit <n>:\n${list}${meter}`,
           })
