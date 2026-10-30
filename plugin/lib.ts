@@ -1,7 +1,6 @@
 import { tmpdir } from "node:os"
 import { existsSync } from "node:fs"
 import { join, resolve } from "node:path"
-import { fileURLToPath } from "node:url"
 import { spawn } from "node:child_process"
 import { rm, writeFile } from "node:fs/promises"
 
@@ -37,8 +36,6 @@ export function locate(directory: string, pluginDir: string): string | null {
   }
   return null
 }
-
-const ROOT = fileURLToPath(new URL("..", import.meta.url))
 
 export function harness(directory: string, pluginDir: string) {
   const root = locate(directory, pluginDir)

@@ -9,10 +9,8 @@ import json
 import pathlib
 import sys
 
-REPEATS = 3
-
-def status(runs):
-    if len(runs) != REPEATS:
+def status(runs, repeats):
+    if len(runs) != repeats:
         return "error"
     passes = [r["pass"] for r in runs]
 
@@ -26,7 +24,9 @@ def status(runs):
 
 def load(path):
     data = json.loads(pathlib.Path(path).read_text())
-    return {gid: status(entry["runs"]) for gid, entry in data["results"].items()}
+    counts = [len(entry["runs"]) for entry in data["results"].values() if entry["runs"]]
+    repeats = max(counts) if counts else 0
+    return {gid: status(entry["runs"], repeats) for gid, entry in data["results"].items()}
 
 def summarise(label, statuses):
     counts = {}
