@@ -66,6 +66,20 @@ export HARRY_JUDGE_MODEL="some-model"
 
 They are read at import, so put them in your shell profile or a `direnv` entry. Without either path the judged rules pass and say so.
 
+## Updating an install
+
+`opencode plugin update` does not work for a git spec — it reports `Plugin is not configured`, and the all-form says nothing is available even when the copy is stale. Re-adding reuses the cache, so it does not refresh either.
+
+Remove, drop the cache, re-add:
+
+```bash
+opencode plugin remove 'github:rchl2/harry'
+rm -rf ~/.cache/opencode/npm/git-harry-*
+npm_config_allow_git=all opencode plugin add 'github:rchl2/harry'
+```
+
+The cache directory name contains a hash of the spec, so the wildcard only matches harry. Check the new path with `/harry-status` and confirm the timestamp changed.
+
 ## Agents
 
 `adapters/opencode.sh` is the only adapter. The contract is three lines at the top of the file: task in `$1`, run in the current directory, narration on stdout. Copy it and change the command.
