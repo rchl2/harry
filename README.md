@@ -9,16 +9,12 @@ It runs inside opencode. The rules go into every request, so the agent writes to
 Needs Python 3.11 or newer.
 
 ```bash
-opencode plugin add 'github:rchl2/harry'
+npm_config_allow_git=all opencode plugin add 'github:rchl2/harry'
 ```
 
 If you forked it, swap `rchl2` for your account.
 
-If npm refuses with `Fetching packages of type "git" have been disabled`, your npm config sets `allow-git`. Override it:
-
-```bash
-npm_config_allow_git=all opencode plugin add 'github:rchl2/harry'
-```
+`npm_config_allow_git=all` is there because many npm configs set `allow-git`, which blocks git installs with `Fetching packages of type "git" have been disabled`. Drop it if yours does not.
 
 If you cloned it locally instead, point the config at the directory:
 
@@ -26,7 +22,7 @@ If you cloned it locally instead, point the config at the directory:
 { "plugins": ["/Users/you/harry"] }
 ```
 
-Check it loaded with `/harry-status`. A toast reports the harness path it found, or `harness not found`.
+Check it loaded with `/harry-status`. A toast says `harness found` or `harness not found`.
 
 If it is not found, set `HARRY_HARNESS` to the directory holding `run.py`.
 
