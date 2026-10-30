@@ -1,3 +1,4 @@
+import { Harry } from "./rpc"
 import { harness } from "./lib"
 import { createHash } from "node:crypto"
 import { fileURLToPath } from "node:url"
@@ -49,7 +50,7 @@ export default Plugin.define({
       const selected = (await ctx.model.default()).data
       if (!selected) return out
 
-      const { text } = await ctx.generate.text({
+      const { text } = await ctx.experimental.generate.text({
         prompt:
           "Write three commit subjects for this diff. Imperative mood, under " +
           "fifty characters, no trailing period, no 'we'. One per line, no " +
@@ -64,17 +65,12 @@ export default Plugin.define({
       return out.slice(0, MAX_CANDIDATES)
     }
 
-    await ctx.command.transform((editor) => {
-      editor.add({
-        name: "harry-update",
-        description: "Reinstall harry from the repo and clear the cache",
-        execute: async ({ sessionID }) => {
-          await ctx.session.synthetic({ sessionID, text: "Updating harry…" })
-          const outcome = await h.update()
-          await ctx.session.prompt({ sessionID, text: outcome })
-        },
-      })
+    await ctx.rpc.register(Harry, {
+      status: async () => ({ root: h.root, rules: rules ? rules.split("\n").length : 0 }),
+      update: async () => ({ message: await h.update() }),
+    })
 
+    await ctx.command.transform((editor) => {
       editor.add({
         name: "harry-reload",
         description: "Re-read the rules and skill from disk after editing them",

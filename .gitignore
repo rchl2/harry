@@ -8,7 +8,8 @@ baseline.json
 
 # dependencies and builds
 node_modules/
-dist/
+dist/*
+!dist/gui-experimental.cjs
 build/
 *.tsbuildinfo
 

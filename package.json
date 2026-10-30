@@ -4,12 +4,16 @@
   "type": "module",
   "exports": {
     ".": "./plugin/index.ts",
-    "./tui": "./plugin/tui.ts"
+    "./tui": "./plugin/tui.ts",
+    "./rpc": "./plugin/rpc.ts",
+    "./gui-experimental": "./dist/gui-experimental.cjs"
   },
   "files": [
     "plugin/index.ts",
     "plugin/lib.ts",
     "plugin/tui.ts",
+    "plugin/rpc.ts",
+    "dist/gui-experimental.cjs",
     "run.py",
     "graders",
     "rules",
@@ -17,13 +21,17 @@
     "SKILL.md"
   ],
   "dependencies": {
-    "@opencode/plugin": "^2.1.3"
+    "@opencode/plugin": "2.2.3"
   },
   "devDependencies": {
     "@types/node": "26.6.5",
-    "typescript": "7.0.2"
+    "solid-js": "1.9.18",
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "vite-plugin-solid": "2.11.15"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:gui": "vite build"
   }
 }
