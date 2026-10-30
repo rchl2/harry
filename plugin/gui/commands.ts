@@ -30,6 +30,31 @@ export function registerCommands(ctx: Context, state: State) {
   }))
 
   ctx.add(Command, () => ({
+    id: "open",
+    title: "Open harry rules",
+    description: "Open the rules file in your editor",
+    group: "Harry",
+    slash: { name: "harry-open" },
+    run: async () => {
+      try {
+        const { root } = (await ctx.client.rpc(Harry).status({})) as Status
+        if (!root) {
+          ctx.toast.show({
+            title: "Harry",
+            description: "Rules not found. Set HARRY_HARNESS to the folder holding run.py.",
+            variant: "error",
+            duration: 8000,
+          })
+          return
+        }
+        ctx.system.openExternal(`file://${root}/rules/writing_styles.md`)
+      } catch (error) {
+        ctx.toast.show({ title: "Harry", description: `Could not open the rules: ${error}`, variant: "error", duration: 8000 })
+      }
+    },
+  }))
+
+  ctx.add(Command, () => ({
     id: "check",
     title: "Check prose",
     description: "Lint now, without waiting for a turn",

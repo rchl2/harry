@@ -2,6 +2,7 @@ import { registerPill } from "./pill"
 import { createState } from "./state"
 import { registerPanel } from "./panel"
 import { registerSettings } from "./settings"
+import { registerBadge } from "./badge"
 import { registerCommands } from "./commands"
 import { Harry, type LastUpdate, type Staged } from "../rpc"
 import { commitFlow } from "./commit"
@@ -54,6 +55,7 @@ export default Plugin.define({
     )
 
     registerSettings(ctx, state)
+    registerBadge(ctx, state)
     registerPanel(ctx, state)
     registerPill(ctx, state)
     registerCommands(ctx, state)
