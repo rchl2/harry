@@ -68,8 +68,8 @@ export default Plugin.define({
     await ctx.rpc.register(Harry, {
       status: async () => ({ root: h.root, rules: rules ? rules.split("\n").length : 0 }),
       prepare: async (input) => {
-        const { directory: dir, message } = input as { directory: string; message?: string }
-        const scoped = harness(dir, pluginDir)
+        const { directory, message } = input as { directory?: string; message?: string }
+        const scoped = harness(directory ?? ctx.location.directory, pluginDir)
         const diff = await scoped.staged()
         if (!diff.trim()) return { staged: false, findings: "", candidates: [] }
 
@@ -81,8 +81,8 @@ export default Plugin.define({
         return { staged: true, findings: lint.output, candidates }
       },
       apply: async (input) => {
-        const { directory: dir, message } = input as { directory: string; message: string }
-        await harness(dir, pluginDir).commit(message)
+        const { directory, message } = input as { directory?: string; message: string }
+        await harness(directory ?? ctx.location.directory, pluginDir).commit(message)
         return { message }
       },
       reload: async () => {
@@ -91,8 +91,8 @@ export default Plugin.define({
         return { rules: rules ? rules.split("\n").length : 0 }
       },
       findings: async (input) => {
-        const { directory } = input as { directory: string }
-        const scoped = harness(directory, pluginDir)
+        const { directory } = input as { directory?: string }
+        const scoped = harness(directory ?? ctx.location.directory, pluginDir)
         const found = await scoped.findings(await scoped.working())
         return { items: found.map(({ rule, file, line, message }) => ({ rule, file, line, message })) }
       },

@@ -47,13 +47,8 @@ export default Plugin.define({
 
     const open = (session: MountedSession) => ctx.layout.open(`${ctx.id}:findings`, session)
 
-    // a draft is not routed yet, so fall back to the newest tab that knows its directory
-    const currentDirectory = () => {
-      const routed = ctx.sessions.current()?.directory
-      if (routed) return routed
-      const known = ctx.sessions.list().flatMap((session) => session.location?.directory ?? [])
-      return known[known.length - 1]
-    }
+    // a draft is not routed yet; the server falls back to its own location when this is undefined
+    const currentDirectory = () => ctx.sessions.current()?.directory
 
     const Findings = (props: { session: MountedSession }) => (
       <box flexDirection="column" gap={1}>
@@ -136,10 +131,9 @@ export default Plugin.define({
       slash: { name: "harry" },
       run: async () => {
         const directory = currentDirectory()
-        if (!directory) return
         try {
           const { items } = (await ctx.client.rpc(Harry).findings({ directory })) as Findings
-          setFindings(directory, items)
+          if (directory) setFindings(directory, items)
           ctx.toast.show({
             title: "Harry",
             description: items.length === 0 ? "Prose clean." : `${items.length} finding${items.length === 1 ? "" : "s"}`,
@@ -160,7 +154,6 @@ export default Plugin.define({
       slash: { name: "commit", arguments: true },
       run: async (input) => {
         const directory = currentDirectory()
-        if (!directory) return
 
         const apply = async (message: string) => {
           try {

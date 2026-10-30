@@ -27,7 +27,6 @@ export const Harry = {
       input: {
         type: "object",
         properties: { directory: { type: "string" } },
-        required: ["directory"],
       },
       output: {
         type: "object",
@@ -53,7 +52,6 @@ export const Harry = {
       input: {
         type: "object",
         properties: { directory: { type: "string" }, message: { type: "string" } },
-        required: ["directory"],
       },
       output: {
         type: "object",
@@ -69,7 +67,7 @@ export const Harry = {
       input: {
         type: "object",
         properties: { directory: { type: "string" }, message: { type: "string" } },
-        required: ["directory", "message"],
+        required: ["message"],
       },
       output: {
         type: "object",
