@@ -1,4 +1,4 @@
-import { Rpc } from "@opencode/plugin/rpc"
+import { Rpc } from "@opencode/schema/rpc"
 
 export type Status = { root: string | null; rules: number }
 export type Update = { message: string }
