@@ -47,6 +47,14 @@ export default Plugin.define({
 
     const open = (session: MountedSession) => ctx.layout.open(`${ctx.id}:findings`, session)
 
+    // a draft is not routed yet, so fall back to the newest tab that knows its directory
+    const currentDirectory = () => {
+      const routed = ctx.sessions.current()?.directory
+      if (routed) return routed
+      const known = ctx.sessions.list().flatMap((session) => session.location?.directory ?? [])
+      return known[known.length - 1]
+    }
+
     const Findings = (props: { session: MountedSession }) => (
       <box flexDirection="column" gap={1}>
         <For each={findings[props.session.directory] ?? []}>
@@ -127,11 +135,11 @@ export default Plugin.define({
       group: "Harry",
       slash: { name: "harry" },
       run: async () => {
-        const session = ctx.sessions.current()
-        if (!session) return
+        const directory = currentDirectory()
+        if (!directory) return
         try {
-          const { items } = (await ctx.client.rpc(Harry).findings({ directory: session.directory })) as Findings
-          setFindings(session.directory, items)
+          const { items } = (await ctx.client.rpc(Harry).findings({ directory })) as Findings
+          setFindings(directory, items)
           ctx.toast.show({
             title: "Harry",
             description: items.length === 0 ? "Prose clean." : `${items.length} finding${items.length === 1 ? "" : "s"}`,
@@ -151,12 +159,12 @@ export default Plugin.define({
       group: "Harry",
       slash: { name: "commit", arguments: true },
       run: async (input) => {
-        const session = ctx.sessions.current()
-        if (!session) return
+        const directory = currentDirectory()
+        if (!directory) return
 
         const apply = async (message: string) => {
           try {
-            await ctx.client.rpc(Harry).apply({ directory: session.directory, message })
+            await ctx.client.rpc(Harry).apply({ directory, message })
             ctx.toast.show({ title: "Harry", description: `Committed: ${message}`, variant: "success" })
           } catch (error) {
             ctx.toast.show({ title: "Harry", description: `Commit failed: ${error}`, variant: "error", duration: 8000 })
@@ -164,10 +172,7 @@ export default Plugin.define({
         }
 
         try {
-          const prep = (await ctx.client.rpc(Harry).prepare({
-            directory: session.directory,
-            message: input,
-          })) as Prepare
+          const prep = (await ctx.client.rpc(Harry).prepare({ directory, message: input })) as Prepare
 
           if (!prep.staged) {
             ctx.toast.show({ title: "Harry", description: "Nothing staged.", variant: "default" })
