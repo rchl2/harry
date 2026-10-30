@@ -4,14 +4,12 @@
   "type": "module",
   "exports": {
     ".": "./plugin/index.ts",
-    "./tui": "./plugin/tui.ts",
     "./rpc": "./plugin/rpc.ts",
     "./gui-experimental": "./dist/gui-experimental.cjs"
   },
   "files": [
     "plugin/index.ts",
     "plugin/lib.ts",
-    "plugin/tui.ts",
     "plugin/rpc.ts",
     "dist/gui-experimental.cjs",
     "run.py",

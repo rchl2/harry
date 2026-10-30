@@ -1,13 +1,13 @@
 import type { Rpc } from "@opencode/schema/rpc"
 
-export type Status = { root: string | null; rules: number }
-export type Update = { message: string }
-export type LastUpdate = { message: string | null }
-export type Finding = { rule: string; file: string; line: number; message: string }
-export type Findings = { items: Finding[] }
 export type Reload = { rules: number }
-export type Prepare = { staged: boolean; findings: string; candidates: string[] }
 export type Apply = { message: string }
+export type Update = { message: string }
+export type Findings = { items: Finding[] }
+export type LastUpdate = { message: string | null }
+export type Status = { root: string | null; rules: number }
+export type Prepare = { staged: boolean; findings: string; candidates: string[] }
+export type Finding = { rule: string; file: string; line: number; message: string }
 
 export const Harry = {
   id: "harry",

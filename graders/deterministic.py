@@ -23,10 +23,17 @@ DETRITUS = re.compile(
     re.I,
 )
 
-BANNED_STE_KEYWORDS = [
-    "commence", "utilize", "ensure", "prior to", "in order to",
-    "terminate", "sufficient", "in the event", "subsequent",
-]
+PLAINER = {
+    "commence": "start",
+    "utilize": "use",
+    "ensure": "make sure",
+    "prior to": "before",
+    "in order to": "to",
+    "terminate": "end",
+    "sufficient": "enough",
+    "in the event": "if",
+    "subsequent": "later",
+}
 
 VAGUE_NAMES = {
     "data", "temp", "tmp", "result", "res", "handle", "manager", "util",
@@ -112,7 +119,7 @@ def comment_detritus(bundle):
         body = m.group(2)
 
         if DETRITUS.search(body):
-            out.append(_finding("comment_detritus", path, number, "history, not state. Say what is true now.", body))
+            out.append(_finding("comment_detritus", path, number, "History, not state. Say what is true now.", body))
     return out
 
 def comment_restates(bundle):
@@ -133,7 +140,7 @@ def comment_restates(bundle):
             continue
 
         if sum(1 for w in words if w in window) / len(words) >= 0.7:
-            out.append(_finding("comment_restates", path, number, "the code already says this. Delete it or add why.", body))
+            out.append(_finding("comment_restates", path, number, "The code already says this. Delete it or add why.", body))
     return out
 
 def commented_out_code(bundle):
@@ -146,7 +153,7 @@ def commented_out_code(bundle):
         body = m.group(2).strip()
 
         if re.search(r"[;{}]\s*$", body) or re.match(r"^(const|let|var|return|if|for|await)\b", body):
-            out.append(_finding("commented_out_code", path, number, "dead code in a comment.", body))
+            out.append(_finding("commented_out_code", path, number, "Dead code in a comment.", body))
     return out
 
 def name_pronoun(bundle):
@@ -174,12 +181,12 @@ def error_message(bundle):
             msg = m.group(1)
 
             if ": " not in msg:
-                out.append(_finding("error_message", path, number, "no next action. Use `code: what happened, what to do`.", msg))
+                out.append(_finding("error_message", path, number, "No next action. Use `code: what happened, what to do`.", msg))
                 continue
 
             tail = msg.split(": ", 1)[1]
             if len(tail.split()) < 3:
-                out.append(_finding("error_message", path, number, "the part after the code does not say what to do.", msg))
+                out.append(_finding("error_message", path, number, "The part after the code does not say what to do.", msg))
     return out
 
 def ste_procedure(bundle):
@@ -191,11 +198,15 @@ def ste_procedure(bundle):
                 out.append(_finding("ste_procedure", "", n, "over twenty words. Split it.", s))
 
             if PASSIVE.search(s):
-                out.append(_finding("ste_procedure", "", n, "passive voice. Use the actor.", s))
-            banned = [w for w in BANNED_STE_KEYWORDS if re.search(rf"\b{w}\b", s, re.I)]
-            
+                out.append(_finding("ste_procedure", "", n, "passive voice hides who acts. Name the actor.", s))
+            banned = [w for w in PLAINER if re.search(rf"\b{w}\b", s, re.I)]
+
             if banned:
-                out.append(_finding("ste_procedure", "", n, f"`{banned[0]}` has a plainer word.", s))
+                out.append(_finding(
+                    "ste_procedure", "", n,
+                    f"`{banned[0]}` is stiff. Use `{PLAINER[banned[0]]}`.",
+                    s,
+                ))
     return out
 
 def commit_subject(bundle):
@@ -206,19 +217,19 @@ def commit_subject(bundle):
     subject = bundle.get("commit", "").splitlines()[0] if bundle.get("commit") else ""
 
     if not subject:
-        return [_finding("commit_subject", "", 0, "no commit message captured.")]
+        return [_finding("commit_subject", "", 0, "No commit message captured.")]
 
     if len(subject) > 50:
         out.append(_finding("commit_subject", "", 0, f"{len(subject)} chars. Cut to fifty.", subject))
 
     if subject.endswith("."):
-        out.append(_finding("commit_subject", "", 0, "no trailing period.", subject))
+        out.append(_finding("commit_subject", "", 0, "No trailing period.", subject))
 
     if PAST_TENSE.search(subject):
-        out.append(_finding("commit_subject", "", 0, "past tense. Use the imperative.", subject))
+        out.append(_finding("commit_subject", "", 0, "Past tense. Use the imperative.", subject))
 
     if re.search(r"\bwe\b", subject, re.I):
-        out.append(_finding("commit_subject", "", 0, "drop `we`.", subject))
+        out.append(_finding("commit_subject", "", 0, "Drop `we`.", subject))
     return out
 
 def intent_first(bundle):
@@ -246,7 +257,7 @@ def todo_bare(bundle):
         body = m.group(2).strip()
 
         if TODO.search(body) and not TODO_OK.search(body):
-            out.append(_finding("todo_bare", path, number, "a bare TODO says nothing. Use `TODO(name)` or `TODO: when X`.", body))
+            out.append(_finding("todo_bare", path, number, "A bare TODO says nothing. Use `TODO(name)` or `TODO: when X`.", body))
     return out
 
 
@@ -263,11 +274,11 @@ def empty_catch(bundle):
         rest = text[m.end():].strip()
 
         if rest.startswith("}"):
-            out.append(_finding("empty_catch", path, number, "swallows the error. Say why, or rethrow.", text))
+            out.append(_finding("empty_catch", path, number, "Swallows the error. Say why, or rethrow.", text))
             continue
 
         if rest == "" and i + 1 < len(lines) and lines[i + 1][2].strip() == "}":
-            out.append(_finding("empty_catch", path, number, "swallows the error. Say why, or rethrow.", text))
+            out.append(_finding("empty_catch", path, number, "Swallows the error. Say why, or rethrow.", text))
     return out
 
 

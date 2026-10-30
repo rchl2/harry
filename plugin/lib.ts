@@ -46,7 +46,7 @@ export function harness(directory: string, pluginDir: string) {
 
     async lint(diff: string): Promise<Lint> {
       if (! root) {
-        return { clean: false, output: "harry not found. Set HARRY_HARNESS or vendor it." }
+        return { clean: false, output: "Harry not found. Set HARRY_HARNESS or vendor it." }
       }
 
       const { stdout } = await exec("python3", [script, "--diff", "-"], directory, diff)

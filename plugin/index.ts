@@ -118,7 +118,7 @@ export default Plugin.define({
           if (!diff.trim()) return { content: "Nothing to check." }
           await context.progress({ status: "checking prose" })
           const result = await h.lint(diff)
-          return { content: result.clean ? "Prose clean." : result.output }
+          return { content: result.clean ? "Prose is clean." : result.output }
         },
       })
     })
