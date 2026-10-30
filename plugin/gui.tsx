@@ -1,8 +1,24 @@
 import { Command, Plugin } from "@opencode/plugin/gui"
-import { Harry, type Status, type Update } from "./rpc"
+import { Harry, type LastUpdate, type Status } from "./rpc"
 
 export default Plugin.define({
   setup(ctx) {
+    // the update reloads this window, so the outcome is stored and shown by the next one
+    void ctx.client
+      .rpc(Harry)
+      .lastUpdate({})
+      .then((result) => {
+        const { message } = result as LastUpdate
+        if (!message) return
+        ctx.toast.show({
+          title: "Harry",
+          description: message,
+          variant: message.startsWith("Updated") ? "success" : "error",
+          duration: 8000,
+        })
+      })
+      .catch(() => {})
+
     ctx.add(Command, () => ({
       id: "status",
       title: "Harry status",
@@ -37,16 +53,7 @@ export default Plugin.define({
       run: async () => {
         ctx.toast.show({ title: "Harry", description: "Reinstalling…", variant: "loading", persistent: true })
         try {
-          const { message } = (await ctx.client.rpc(Harry).update({})) as Update
-          const failed = !message.startsWith("Updated")
-          // the update reloads this window, so a toast alone would vanish with it - let's use attention
-          void ctx.attention.notify({ title: "Harry", message, variant: failed ? "error" : "default" })
-          ctx.toast.show({
-            title: "Harry",
-            description: message,
-            variant: failed ? "error" : "success",
-            duration: 8000,
-          })
+          await ctx.client.rpc(Harry).update({})
         } catch (error) {
           ctx.toast.show({ title: "Harry", description: `Update failed: ${error}`, variant: "error", duration: 8000 })
         }

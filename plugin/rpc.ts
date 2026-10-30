@@ -2,6 +2,7 @@ import { Rpc } from "@opencode/plugin/rpc"
 
 export type Status = { root: string | null; rules: number }
 export type Update = { message: string }
+export type LastUpdate = { message: string | null }
 
 export const Harry = Rpc.define({
   id: "harry",
@@ -15,6 +16,14 @@ export const Harry = Rpc.define({
           rules: { type: "number" },
         },
         required: ["root", "rules"],
+      },
+    },
+    lastUpdate: {
+      input: { type: "object", properties: {}, additionalProperties: false },
+      output: {
+        type: "object",
+        properties: { message: { type: ["string", "null"] } },
+        required: ["message"],
       },
     },
     update: {

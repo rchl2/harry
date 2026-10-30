@@ -14,5 +14,8 @@ jobs:
           node-version: "22"
       - run: npm ci
       - run: npx tsc --noEmit
+      # the GUI bundle is committed, so a stale one has to fail
+      - run: npm run build:gui
+      - run: git diff --exit-code -- dist
       # no opencode on the runner, so the judged rules skip and CI covers the deterministic ones
       - run: python3 run.py --calibrate

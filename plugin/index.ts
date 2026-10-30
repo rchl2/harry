@@ -1,5 +1,5 @@
-import { harness } from "./lib"
 import { Harry } from "./rpc"
+import { harness } from "./lib"
 import { createHash } from "node:crypto"
 import { fileURLToPath } from "node:url"
 import { readFile } from "node:fs/promises"
@@ -67,7 +67,16 @@ export default Plugin.define({
 
     await ctx.rpc.register(Harry, {
       status: async () => ({ root: h.root, rules: rules ? rules.split("\n").length : 0 }),
-      update: async () => ({ message: await h.update() }),
+      lastUpdate: async () => {
+        const stored = (await ctx.storage.get("update-result")) as { message: string } | undefined
+        await ctx.storage.remove("update-result")
+        return { message: stored?.message ?? null }
+      },
+      update: async () => {
+        const message = await h.update()
+        await ctx.storage.set("update-result", { message })
+        return { message }
+      },
     })
 
     await ctx.command.transform((editor) => {
