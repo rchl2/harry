@@ -1,5 +1,5 @@
-import { Harry } from "./rpc"
 import { harness } from "./lib"
+import { Harry } from "./rpc"
 import { createHash } from "node:crypto"
 import { fileURLToPath } from "node:url"
 import { readFile } from "node:fs/promises"
