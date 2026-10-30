@@ -4,8 +4,10 @@ import { SettingsPage, type Context } from "@opencode/plugin/gui"
 export function registerSettings(ctx: Context, state: State) {
   ctx.add(SettingsPage, {
     id: "harry",
+    page: "general",
+    section: "general",
     title: "Harry",
-    icon: "check",
+    entries: [{ id: "harry", title: "Harry", keywords: "prose lint rules" }],
     render: () => (
       <box flexDirection="column" gap={1}>
         <ctx.ui.Switch

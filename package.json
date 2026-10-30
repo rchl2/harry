@@ -16,10 +16,11 @@
     "plugin/gui",
     "dist/gui-experimental.cjs",
     "run.py",
-    "graders",
     "rules",
     "fixtures.json",
-    "SKILL.md"
+    "SKILL.md",
+    "graders",
+    "!graders/__pycache__"
   ],
   "devDependencies": {
     "@opencode/plugin": "2.2.3",
