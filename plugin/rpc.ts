@@ -5,6 +5,7 @@ export type Update = { message: string }
 export type LastUpdate = { message: string | null }
 export type Finding = { rule: string; line: number; message: string }
 export type Findings = { items: Finding[] }
+export type Reload = { rules: number }
 
 export const Harry = Rpc.define({
   id: "harry",
@@ -39,6 +40,14 @@ export const Harry = Rpc.define({
           },
         },
         required: ["items"],
+      },
+    },
+    reload: {
+      input: { type: "object", properties: {}, additionalProperties: false },
+      output: {
+        type: "object",
+        properties: { rules: { type: "number" } },
+        required: ["rules"],
       },
     },
     lastUpdate: {

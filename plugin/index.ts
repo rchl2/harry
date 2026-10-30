@@ -67,6 +67,11 @@ export default Plugin.define({
 
     await ctx.rpc.register(Harry, {
       status: async () => ({ root: h.root, rules: rules ? rules.split("\n").length : 0 }),
+      reload: async () => {
+        rules = h.root ? await read(`${h.root}/rules/writing_styles.md`) : ""
+        await loadSkill()
+        return { rules: rules ? rules.split("\n").length : 0 }
+      },
       findings: async () => {
         const found = await h.findings(await h.working())
         return { items: found.map(({ rule, line, message }) => ({ rule, line, message })) }
@@ -84,19 +89,6 @@ export default Plugin.define({
     })
 
     await ctx.command.transform((editor) => {
-      editor.add({
-        name: "harry-reload",
-        description: "Re-read the rules and skill from disk after editing them",
-        execute: async ({ sessionID }) => {
-          rules = h.root ? await read(`${h.root}/rules/writing_styles.md`) : ""
-          await loadSkill()
-          await ctx.session.prompt({
-            sessionID,
-            text: rules ? `Reloaded ${rules.split("\n").length} lines of rules.` : "No rules found.",
-          })
-        },
-      })
-
       editor.add({
         name: "harry",
         description: "Lint the working diff for prose problems",

@@ -1,6 +1,6 @@
 import { createStore } from "solid-js/store"
 import { Command, ComposerPill, createKeyed, Plugin } from "@opencode/plugin/gui"
-import { Harry, type Findings, type LastUpdate, type Status } from "./rpc"
+import { Harry, type Findings, type LastUpdate, type Reload, type Status } from "./rpc"
 
 export default Plugin.define({
   setup(ctx) {
@@ -82,6 +82,26 @@ export default Plugin.define({
           )
         } catch (error) {
           ctx.toast.show({ title: "Harry", description: `Status failed: ${error}`, variant: "error", duration: 8000 })
+        }
+      },
+    }))
+
+    ctx.add(Command, () => ({
+      id: "reload",
+      title: "Reload harry rules",
+      description: "Re-read the rules and skill from disk",
+      group: "Harry",
+      slash: { name: "harry-reload" },
+      run: async () => {
+        try {
+          const { rules } = (await ctx.client.rpc(Harry).reload({})) as Reload
+          ctx.toast.show({
+            title: "Harry",
+            description: rules ? `Reloaded ${rules} lines of rules.` : "No rules found.",
+            variant: rules ? "success" : "error",
+          })
+        } catch (error) {
+          ctx.toast.show({ title: "Harry", description: `Reload failed: ${error}`, variant: "error", duration: 8000 })
         }
       },
     }))
