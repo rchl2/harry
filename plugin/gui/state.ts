@@ -28,6 +28,33 @@ export const toItems = (value: unknown): Findings["items"] => {
 const same = (left: Findings["items"][number], right: Findings["items"][number]) =>
   left.rule === right.rule && left.file === right.file && left.line === right.line
 
+export type Group = {
+  rule: string
+  file: string
+  line: number
+  messages: string[]
+  count: number
+}
+
+export function groupFindings(items: Findings["items"]): Group[] {
+  const groups = new Map<string, Group>()
+
+  for (const item of items) {
+    const key = `${item.rule}\0${item.file}`
+    const group = groups.get(key)
+
+    if (group) {
+      group.count += 1
+      if (!group.messages.includes(item.message)) group.messages.push(item.message)
+      continue
+    }
+
+    groups.set(key, { rule: item.rule, file: item.file, line: item.line, messages: [item.message], count: 1 })
+  }
+
+  return [...groups.values()]
+}
+
 export function createState(ctx: Context) {
   const [findings, setFindings] = createStore<Record<string, Findings["items"]>>({})
   const [fixed, setFixed] = createStore<Record<string, Findings["items"]>>({})
