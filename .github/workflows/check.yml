@@ -6,6 +6,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -20,3 +22,15 @@ jobs:
       - run: npm run check:pack
       # no opencode on the runner, so the judged rules skip and CI covers the deterministic ones
       - run: python3 run.py --calibrate
+      # this repo's own prose; test sets and build output are skipped
+      - name: Lint the prose in the change
+        run: |
+          base="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            base=HEAD~1
+          fi
+          if ! git rev-parse "$base" >/dev/null 2>&1; then
+            echo "no base commit to diff"
+            exit 0
+          fi
+          git diff "$base" HEAD | python3 run.py --diff - --strict

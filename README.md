@@ -61,6 +61,14 @@ The rules are global. Test sets are not: `/harry-goldens` writes `.harry/` in th
 
 Pin a version with `opencode plugin add opencode-harry@0.1.0` if a release lands before you want it.
 
+## CI
+
+The agent path never blocks. A team that wants a gate can add `--strict`, which exits 1 on any finding:
+
+```bash
+git diff origin/main...HEAD | python3 run.py --diff - --strict
+```
+
 ## Limits
 
 - It grades prose, not code. A clean run says nothing about whether the change works.

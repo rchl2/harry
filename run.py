@@ -211,6 +211,7 @@ def main():
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--json", action="store_true", help="print findings as JSON")
     parser.add_argument("--suggest", action="store_true", help="suggest a fixed commit subject")
+    parser.add_argument("--strict", action="store_true", help="exit 1 when a finding is left")
     args = parser.parse_args()
 
     if args.calibrate:
@@ -228,7 +229,7 @@ def main():
                 better = fix.subject(text)
                 if better:
                     print(f"\nsuggested: {better}")
-        sys.exit(0)
+        sys.exit(1 if args.strict and not result["pass"] else 0)
 
     if args.diff:
         text = sys.stdin.read() if args.diff == "-" else pathlib.Path(args.diff).read_text()
@@ -244,7 +245,7 @@ def main():
             print("clean")
         else:
             print_findings(result)
-        sys.exit(0)
+        sys.exit(1 if args.strict and not result["pass"] else 0)
 
     goldens = load_goldens(None if args.all else args.task)
     if not goldens:
