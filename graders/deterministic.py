@@ -38,11 +38,12 @@ PLAINER = {
 VAGUE_NAMES = {
     "data", "temp", "tmp", "result", "res", "handle", "manager", "util",
 }
+BOOL_NAMES = {"flag", "is", "has", "can", "should", "did"}
 
 PAST_TENSE = re.compile(rf"^({'|'.join(w.capitalize() for w in fix.PAST)})\b")
 
 PASSIVE = re.compile(r"\b(is|are|was|were|be|been|being)\s+\w+(ed|en)\b", re.I)
-GOAL = re.compile(r"\b(so that|because|to \w+|enables|lets|makes|avoids|prevents)\b", re.I)
+GOAL = re.compile(r"\b(so|because|to \w+|enables|lets|makes|avoids|prevents)\b", re.I)
 WHY = re.compile(
     r"\b(because|so|why|must|never|avoid|trap|constraint|otherwise|unless|"
     r"only|before|after|until|cap|capped)\b",
@@ -91,6 +92,15 @@ HANDLE_CALLBACK = re.compile(
     r")"
 )
 
+NEW_TYPE = re.compile(r"=\s*new\s+([A-Za-z_$][\w$]*)")
+FENCE = re.compile(r"^\s*(```|~~~)")
+INLINE_CODE = re.compile(r"`[^`\n]+`")
+LINE_MARKER = re.compile(r"^\s*(?:#{1,6}\s+|[-*+]\s+(?:\[[ x]\]\s+)?|\d+\.\s+)")
+GENERIC_DOC = re.compile(
+    r"^(?:gets|returns|sets|creates|builds|makes|finds|reads|writes|updates|deletes)"
+    r"\s+(?:the\s+)?(?:value|data|result|item|thing|object|response)\.?$",
+    re.I,
+)
 STABLE_CODE = re.compile(
     r"^(?:[a-z][a-z0-9]*(?:_[a-z0-9]+)+"
     r"|[a-z][a-z0-9]*(?:\.[a-z0-9_]+)+"
@@ -113,6 +123,18 @@ def _finding(rule, path, line, message, excerpt=""):
 
 def _sentences(text):
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+
+def _prose(text):
+    """Drop fenced and inline code, and list or heading markers."""
+    out = []
+    fenced = False
+    for line in text.splitlines():
+        if FENCE.match(line):
+            fenced = not fenced
+            continue
+        if not fenced:
+            out.append(LINE_MARKER.sub("", line) if line.strip() else "")
+    return INLINE_CODE.sub("", "\n".join(out))
 
 def _added_lines(diff):
     """Yield (file, new-file line number, text) for added lines only."""
@@ -199,11 +221,17 @@ def name_pronoun(bundle):
 
         for m in CODE_DECL.finditer(text):
             name = m.group(2)
-            if name.lower() not in VAGUE_NAMES:
+            lower = name.lower()
+            if lower not in VAGUE_NAMES:
                 continue
 
             # a handler verb is enough when the value is the callback
-            if name == "handle" and HANDLE_CALLBACK.search(text):
+            if lower == "handle" and HANDLE_CALLBACK.search(text):
+                continue
+
+            # the constructed type carries the noun: `new QueueManager()`
+            created = NEW_TYPE.search(text)
+            if lower in {"manager", "util"} and created and lower in created.group(1).lower():
                 continue
 
             # `res.json()` and friends read fine when the call names the thing
@@ -211,6 +239,54 @@ def name_pronoun(bundle):
                 continue
 
             out.append(_finding("name_pronoun", path, number, f"`{name}` is a pronoun. Name what it holds.", text))
+    return out
+
+def bool_name(bundle):
+    """A boolean needs its subject, not just the question."""
+    out = []
+    for path, number, text in _added_lines(bundle.get("diff", "")):
+        if _is_doc(path):
+            continue
+        names = [m.group(2) for m in CODE_DECL.finditer(text)]
+        names += [m.group(1) for m in PHP_DECL.finditer(text)]
+
+        for name in names:
+            lower = name.lower()
+            if lower not in BOOL_NAMES:
+                continue
+            if lower == "flag":
+                out.append(_finding("bool_name", path, number, "`flag` says nothing. Name the condition it holds.", text))
+            else:
+                out.append(_finding("bool_name", path, number, f"`{name}` has no noun. Name the subject.", text))
+    return out
+
+def _doc_line(text):
+    body = re.sub(r"^\s*/?\*+", "", text)
+    return re.sub(r"\*/\s*$", "", body).strip()
+
+def docstring_generic(bundle):
+    """A first line that names a generic noun tells the caller nothing."""
+    out = []
+    lines = list(_added_lines(bundle.get("diff", "")))
+
+    for i, (path, number, text) in enumerate(lines):
+        if _is_doc(path) or not re.match(r"^\s*/\*\*", text):
+            continue
+
+        first = _doc_line(text)
+        j = i
+        while not first and j + 1 < len(lines) and lines[j + 1][0] == path:
+            j += 1
+            first = _doc_line(lines[j][2])
+            if not first and lines[j][2].strip() == "*/":
+                break
+
+        if first and GENERIC_DOC.match(first):
+            out.append(_finding(
+                "docstring_generic", path, number,
+                f"`{first.rstrip('.')}` names nothing specific. Say what it returns and when it fails.",
+                text,
+            ))
     return out
 
 def error_message(bundle):
@@ -239,7 +315,7 @@ def error_message(bundle):
 
 def ste_procedure(bundle):
     out = []
-    text = bundle.get("pr_body", "")
+    text = _prose(bundle.get("pr_body", ""))
     for n, para in enumerate(text.split("\n\n")):
         for s in _sentences(para):
             if len(s.split()) > 20:
@@ -314,9 +390,9 @@ def commit_body(bundle):
 def intent_first(bundle):
     out = []
     for surface in ("pr_body", "narration"):
-        text = bundle.get(surface, "")
+        text = _prose(bundle.get(surface, ""))
 
-        if not text:
+        if not text.strip():
             continue
 
         head = " ".join(_sentences(text)[:2])
@@ -449,7 +525,9 @@ DETERMINISTIC = {
     "comment_detritus": comment_detritus,
     "comment_restates": comment_restates,
     "commented_out_code": commented_out_code,
+    "docstring_generic": docstring_generic,
     "name_pronoun": name_pronoun,
+    "bool_name": bool_name,
     "error_message": error_message,
     "ste_procedure": ste_procedure,
     "commit_subject": commit_subject,

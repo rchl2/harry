@@ -31,7 +31,9 @@ $ /harry
 
 - comments that restate the code
 - commit subjects in past tense, or over fifty characters
-- `const data`, `const temp`, `const result`
+- pronouns used as names: `data`, `temp`, `result`
+- `flag` used as a boolean name
+- docstrings that only say `Returns the result`
 - `const fetchTimeout` with no unit
 - error messages that only say `Failed to load`
 - commented-out code

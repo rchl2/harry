@@ -59,6 +59,8 @@ First line: what the caller gets, in the caller's terms.
 
 Then the constraints and the failure modes. Skip the walkthrough of the body.
 
+A first line of `Returns the result` carries nothing. Say what it returns and when it fails.
+
 ## Commit messages
 
 Imperative subject. Fifty characters. No trailing period. No `we`.
@@ -84,6 +86,8 @@ Reuse the noun instead of a pronoun-like name. `data`, `temp`, `result`, `handle
 A name that needs a comment to disambiguate is the wrong name.
 
 A handler verb is fine when the name holds a callback: `const handle = () => save()`.
+
+A boolean needs its subject: `cacheEnabled`, not `flag`.
 
 ## Units
 

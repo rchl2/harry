@@ -40,7 +40,7 @@
   },
   "commit_subject": {
     "bad": {
-      "commit": "Added the aircraft source and fixed the filter.\n\nBecause the old filter dropped slow planes.\n"
+      "commit": "Built the aircraft source and fixed the filter.\n\nBecause the old filter dropped slow planes.\n"
     },
     "good": {
       "commit": "Add aircraft source with position-age filter\n\nSlow planes were dropped before they reached the map.\n"
@@ -90,9 +90,14 @@
     "bad": {
       "pr_body": "This PR touches several files.\n"
     },
-    "good": {
-      "pr_body": "Lets the map show aircraft so that low traffic appears next to events.\n"
-    }
+    "good": [
+      {
+        "pr_body": "Lets the map show aircraft so that low traffic appears next to events.\n"
+      },
+      {
+        "pr_body": "Adds a retry helper so callers stop repeating the loop.\n\n```ts\nconst value = ensure(cache)\n```\n"
+      }
+    ]
   },
   "name_pronoun": {
     "bad": {
@@ -107,6 +112,38 @@
       },
       {
         "diff": "+const handle = async (event) => { await save(event) }\n"
+      },
+      {
+        "diff": "+const manager = new QueueManager()\n"
+      },
+      {
+        "diff": "+const util = new StringUtils()\n"
+      }
+    ]
+  },
+  "bool_name": {
+    "bad": {
+      "diff": "+const flag = true\n+const is = ready()\n"
+    },
+    "good": [
+      {
+        "diff": "+const cacheEnabled = true\n"
+      },
+      {
+        "diff": "+const isReady = ready()\n"
+      }
+    ]
+  },
+  "docstring_generic": {
+    "bad": {
+      "diff": "+/** Returns the result. */\n+function decode(body) {}\n+/**\n+ * Gets the data.\n+ */\n+function load(id) {}\n"
+    },
+    "good": [
+      {
+        "diff": "+/** Returns the decoded rows; throws on a malformed body. */\n+function decode(body) {}\n"
+      },
+      {
+        "diff": "+/** Gets the user by id, or null when no row matches. */\n+function getUser(id) {}\n"
       }
     ]
   },
@@ -143,9 +180,14 @@
     "bad": {
       "pr_body": "Prior to the deployment, the migration is commenced by the operator and the cache is cleared by the same operator before the traffic is restored to the service.\n"
     },
-    "good": {
-      "pr_body": "Run the migration first. Clear the cache. Restore traffic.\n"
-    }
+    "good": [
+      {
+        "pr_body": "Run the migration first. Clear the cache. Restore traffic.\n"
+      },
+      {
+        "pr_body": "Run the build.\n\n```ts\n// the value is computed once and cached\nconst value = ensure(cache)\n```\n"
+      }
+    ]
   },
   "what_recovery": {
     "bad": {

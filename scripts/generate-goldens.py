@@ -30,6 +30,8 @@ TASKS = {
     "error_message": "In {path}, make every thrown error say what happened and what to do next.",
     "test_name": "In {path}, rename the weak test so it names the behaviour and the condition.",
     "swallow_log": "In {path}, make the catch handle the failure instead of only logging it.",
+    "bool_name": "In {path}, rename the bare boolean so the name says what it is about.",
+    "docstring_generic": "In {path}, make the docstring first line say what it returns and when it fails.",
     "commit_subject": "Add a one-line note to the README under the title, then commit it.",
     "pr_body": "Write the PR body for the diff between HEAD~1 and HEAD.",
     "narration": "Explain what {path} does and where it can fail.",
@@ -42,6 +44,8 @@ EXPECTED = {
     "error_message": "Each throw reads `code: what happened, what to do`.",
     "test_name": "Each test name says the behaviour and the condition. No `works`, no `should`.",
     "swallow_log": "The catch rethrows, or carries a comment saying why logging is enough.",
+    "bool_name": "The name carries the subject, for example `cached` or `cacheEnabled`.",
+    "docstring_generic": "The first line names what comes back and what can fail.",
     "commit_subject": "Imperative subject under fifty characters, no trailing period, no `we`. The body says why.",
     "pr_body": "One sentence a reviewer can restate, then what changed, why, and how to check it.",
     "narration": "Segmented, one idea per paragraph, told as a story. Not a wall.",
@@ -90,7 +94,7 @@ def main():
             continue
 
         made = 0
-        for rule in ("comment_detritus", "comment_restates", "name_pronoun", "error_message", "test_name", "swallow_log"):
+        for rule in ("comment_detritus", "comment_restates", "name_pronoun", "error_message", "test_name", "swallow_log", "bool_name", "docstring_generic"):
             if made >= MAX_PER_REPO:
                 break
             for path in files(repo):
