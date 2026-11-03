@@ -64,15 +64,36 @@ TODO = re.compile(r"\bTODO\b")
 TODO_OK = re.compile(r"\bTODO\([^)]+\)|\bTODO:\s*\S")
 EMPTY_CATCH = re.compile(r"\bcatch\s*(\([^)]*\))?\s*\{")
 
-UNITLESS = {
-    "timeout", "delay", "interval", "duration", "ttl", "size", "budget",
-    "age", "period", "wait", "expiry", "lifetime",
+# time always needs a unit; a qualified size says what is counted
+TIME_UNITS = {
+    "timeout", "delay", "interval", "duration", "ttl", "age", "period",
+    "wait", "expiry", "lifetime",
 }
-UNITS = {
-    "ms", "s", "sec", "secs", "second", "seconds", "min", "mins", "minute",
-    "minutes", "hour", "hours", "day", "days", "byte", "bytes", "kb", "mb",
-    "gb", "px", "pct", "percent",
+
+SIZE_UNITS = {"size", "budget"}
+COUNT_SUFFIXES = {
+    "count", "num", "index", "attempts", "retries", "hops", "pages", "items",
 }
+
+COUNT_VALUE = re.compile(r"\.\s*(length|size|count)\b|\bObject\.keys\s*\(")
+
+DOC_SUFFIXES = (".md", ".mdx")
+HANDLE_CALLBACK = re.compile(
+    r"\b(?:const|let|var)\s+handle\s*=\s*(?:async\s+)?(?:"
+    r"(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>"
+    r"|function\b"
+    r"|use[A-Z]\w*\s*\("
+    r")"
+)
+STABLE_CODE = re.compile(
+    r"^(?:[a-z][a-z0-9]*(?:_[a-z0-9]+)+"
+    r"|[a-z][a-z0-9]*(?:\.[a-z0-9_]+)+"
+    r"|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)$"
+)
+GENERIC_ERROR = re.compile(r"^(failed to|unable to|something went wrong|could not|error)\b", re.I)
+
+def _is_doc(path):
+    return path.lower().endswith(DOC_SUFFIXES)
 
 def _finding(rule, path, line, message, excerpt=""):
     return {
@@ -108,10 +129,11 @@ def _added_lines(diff):
         elif not raw.startswith("-"):
             number += 1
 
-
 def comment_detritus(bundle):
     out = []
     for path, number, text in _added_lines(bundle.get("diff", "")):
+        if _is_doc(path):
+            continue
         m = COMMENT.match(text)
 
         if not m:
@@ -126,6 +148,8 @@ def comment_restates(bundle):
     out = []
     lines = list(_added_lines(bundle.get("diff", "")))
     for i, (path, number, text) in enumerate(lines[:-1]):
+        if _is_doc(path):
+            continue
         m = COMMENT.match(text)
         if not m:
             continue
@@ -146,6 +170,8 @@ def comment_restates(bundle):
 def commented_out_code(bundle):
     out = []
     for path, number, text in _added_lines(bundle.get("diff", "")):
+        if _is_doc(path):
+            continue
         m = COMMENT.match(text)
 
         if not m:
@@ -167,6 +193,10 @@ def name_pronoun(bundle):
             if name.lower() not in VAGUE_NAMES:
                 continue
 
+            # a handler verb is enough when the value is the callback
+            if name == "handle" and HANDLE_CALLBACK.search(text):
+                continue
+
             # `res.json()` and friends read fine when the call names the thing
             if re.search(rf"\b{name}\.(json|ok|status|data|text)\b", text):
                 continue
@@ -180,13 +210,22 @@ def error_message(bundle):
         for m in THROW.finditer(text):
             msg = m.group(1)
 
-            if ": " not in msg:
-                out.append(_finding("error_message", path, number, "No next action. Use `code: what happened, what to do`.", msg))
+            if STABLE_CODE.match(msg):
                 continue
 
-            tail = msg.split(": ", 1)[1]
-            if len(tail.split()) < 3:
-                out.append(_finding("error_message", path, number, "The part after the code does not say what to do.", msg))
+            if GENERIC_ERROR.match(msg):
+                out.append(_finding("error_message", path, number, "Generic opening. Lead with a stable code.", msg))
+            elif ": " not in msg:
+                out.append(_finding("error_message", path, number, "No next action. Use `code: what happened, what to do`.", msg))
+                continue
+            else:
+                tail = msg.split(": ", 1)[1]
+                if len(tail.split()) < 3:
+                    out.append(_finding("error_message", path, number, "The part after the code does not say what to do.", msg))
+                    continue
+
+            if msg.endswith("."):
+                out.append(_finding("error_message", path, number, "No trailing period in an error message.", msg))
     return out
 
 def ste_procedure(bundle):
@@ -247,9 +286,11 @@ def intent_first(bundle):
     return out
 
 def todo_bare(bundle):
-    """A TODO must say who owns it or when it lifts."""
+    """A TODO must say who owns it or when it lifts off."""
     out = []
     for path, number, text in _added_lines(bundle.get("diff", "")):
+        if _is_doc(path):
+            continue
         m = COMMENT.match(text)
 
         if not m:
@@ -259,7 +300,6 @@ def todo_bare(bundle):
         if TODO.search(body) and not TODO_OK.search(body):
             out.append(_finding("todo_bare", path, number, "A bare TODO says nothing. Use `TODO(name)` or `TODO: when X`.", body))
     return out
-
 
 def empty_catch(bundle):
     """A catch that swallows silently hides the failure."""
@@ -281,7 +321,6 @@ def empty_catch(bundle):
             out.append(_finding("empty_catch", path, number, "Swallows the error. Say why, or rethrow.", text))
     return out
 
-
 def unit_in_name(bundle):
     """A quantity without a unit is a bug waiting for a reader."""
     out = []
@@ -296,10 +335,15 @@ def unit_in_name(bundle):
                 continue
             last = parts[-1].lower()
 
-            if last in UNITLESS:
+            if last in COUNT_SUFFIXES:
+                continue
+            if last in SIZE_UNITS and len(parts) > 1:
+                continue
+            if last in SIZE_UNITS and COUNT_VALUE.search(text):
+                continue
+            if last in TIME_UNITS or last in SIZE_UNITS:
                 out.append(_finding("unit_in_name", path, number, f"`{name}` has no unit. Say ms, bytes, or days.", text))
     return out
-
 
 DETERMINISTIC = {
     "comment_detritus": comment_detritus,

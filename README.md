@@ -33,7 +33,7 @@ $ /harry
 - commit subjects in past tense, or over fifty characters
 - `const data`, `const temp`, `const result`
 - `const fetchTimeout` with no unit
-- `throw new Error('bad_payload')` with no next action
+- error messages that only say `Failed to load`
 - commented-out code
 - bare TODOs, and catches that swallow silently
 

@@ -3,25 +3,40 @@
     "bad": {
       "diff": "+// changed from a loop because it was slow\n+const rows = await db.batch(ids)\n"
     },
-    "good": {
-      "diff": "+// batch lookup: one round trip for N ids\n+const rows = await db.batch(ids)\n"
-    }
+    "good": [
+      {
+        "diff": "+// batch lookup: one round trip for N ids\n+const rows = await db.batch(ids)\n"
+      },
+      {
+        "diff": "+++ b/README.md\n+## What we changed\n+Some text.\n"
+      }
+    ]
   },
   "comment_restates": {
     "bad": {
       "diff": "+// fetch the events\n+const events = await fetchEvents();\n"
     },
-    "good": {
-      "diff": "+// batch lookup: one round trip for N ids\n+const rows = await db.batch(ids)\n"
-    }
+    "good": [
+      {
+        "diff": "+// batch lookup: one round trip for N ids\n+const rows = await db.batch(ids)\n"
+      },
+      {
+        "diff": "+++ b/README.md\n+## Cache lookup\n+Read the cache before the database.\n"
+      }
+    ]
   },
   "commented_out_code": {
     "bad": {
       "diff": "+// const old = compute()\n+const next = compute()\n"
     },
-    "good": {
-      "diff": "+// Retries are capped so a flapping feed cannot pin a worker.\n+const MAX = 3\n"
-    }
+    "good": [
+      {
+        "diff": "+// Retries are capped so a flapping feed cannot pin a worker.\n+const MAX = 3\n"
+      },
+      {
+        "diff": "+++ b/README.md\n+# const values\n+Some text.\n"
+      }
+    ]
   },
   "commit_subject": {
     "bad": {
@@ -33,11 +48,22 @@
   },
   "error_message": {
     "bad": {
-      "diff": "+throw new \\Exception('Failed to create ZIP file.');\n"
+      "diff": "+throw new \\Exception('Failed to create ZIP file.');\n+throw new \\Exception('Something went wrong.');\n"
     },
-    "good": {
-      "diff": "+throw new \\Exception('zip_open_failed: could not create the archive, check the export directory is writable');\n"
-    }
+    "good": [
+      {
+        "diff": "+throw new \\Exception('zip_open_failed: could not create the archive, check the export directory is writable');\n"
+      },
+      {
+        "diff": "+throw new \\Exception('zip_open_failed');\n"
+      },
+      {
+        "diff": "+throw new \\Exception('E_ZIP_OPEN');\n"
+      },
+      {
+        "diff": "+throw new \\Exception('io.open_failed');\n"
+      }
+    ]
   },
   "explains_why": {
     "bad": {
@@ -57,11 +83,19 @@
   },
   "name_pronoun": {
     "bad": {
-      "diff": "+const data = encode(value)\n"
+      "diff": "+const data = encode(value)\n+const handle = client.send()\n"
     },
-    "good": {
-      "diff": "+const bytes = encode(value)\n"
-    }
+    "good": [
+      {
+        "diff": "+const bytes = encode(value)\n"
+      },
+      {
+        "diff": "+const handle = () => save()\n"
+      },
+      {
+        "diff": "+const handle = async (event) => { await save(event) }\n"
+      }
+    ]
   },
   "narration_segmented": {
     "bad": {
@@ -99,9 +133,14 @@
     "bad": {
       "diff": "+// TODO clean this up\n+const rows = 1;\n"
     },
-    "good": {
-      "diff": "+// TODO(marco): drop once the v1 endpoint is gone\n+const rows = 1;\n"
-    }
+    "good": [
+      {
+        "diff": "+// TODO(marco): drop once the v1 endpoint is gone\n+const rows = 1;\n"
+      },
+      {
+        "diff": "+++ b/README.md\n+## TODO\n+Later.\n"
+      }
+    ]
   },
   "empty_catch": {
     "bad": {
@@ -115,8 +154,19 @@
     "bad": {
       "diff": "+const fetchTimeout = 8000;\n"
     },
-    "good": {
-      "diff": "+const fetchTimeoutMs = 8000;\n"
-    }
+    "good": [
+      {
+        "diff": "+const fetchTimeoutMs = 8000;\n"
+      },
+      {
+        "diff": "+const pageSize = 20\n+const cacheSize = 1024\n"
+      },
+      {
+        "diff": "+const size = items.length\n"
+      },
+      {
+        "diff": "+const maxRetries = 3\n"
+      }
+    ]
   }
 }

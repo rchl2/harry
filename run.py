@@ -32,14 +32,14 @@ RULES = sorted(set(det.DETERMINISTIC) | set(judges.RULES))
 KEEP_RUNS = 20
 
 GENERATED = re.compile(
-    r"(^|/)(dist|build|node_modules|vendor|coverage)/"
+    r"(^|/)(dist|build|node_modules|vendor|coverage|examples|goldens)/"
     r"|\.min\."
-    r"|(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$"
+    r"|(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|fixtures\.json|goldens\.jsonl)$"
     r"|\.snap$"
 )
 
 def strip_generated(diff):
-    """Drop hunks for build output and lockfiles; they are not written by hand."""
+    """Drop build output, lockfiles, and test sets; they hold deliberately bad examples."""
     out = []
     keep = True
     for line in diff.splitlines():
@@ -97,9 +97,12 @@ def calibrate():
         if not has_judge and rule in judges.RULES:
             print(f"skip  {rule}: no judge")
             continue
+
         bad = grade_bundle(pair["bad"], {rule})
-        good = grade_bundle(pair["good"], {rule})
-        errors = bad["errors"] or good["errors"]
+        goods = pair["good"] if isinstance(pair["good"], list) else [pair["good"]]
+        good = [grade_bundle(case, {rule}) for case in goods]
+        errors = bad["errors"] or next((g["errors"] for g in good if g["errors"]), [])
+        failed = [g for g in good if not g["pass"]]
 
         if errors:
             print(f"ERROR {rule}: {errors[0]['reason']}")
@@ -107,8 +110,8 @@ def calibrate():
         elif bad["pass"]:
             print(f"FAIL  {rule}: passed the bad fixture")
             ok = False
-        elif not good["pass"]:
-            print(f"FAIL  {rule}: failed the good fixture -> {good['failed_rules']}")
+        elif failed:
+            print(f"FAIL  {rule}: failed a good fixture -> {failed[0]['failed_rules']}")
             ok = False
         else:
             print(f"ok    {rule}")
@@ -116,9 +119,7 @@ def calibrate():
 
 def capture(workdir, surface):
     def git(*args):
-        return subprocess.run(
-            ["git", *args], cwd=workdir, capture_output=True, text=True
-        ).stdout
+        return subprocess.run(["git", *args], cwd=workdir, capture_output=True, text=True).stdout
 
     # a commit golden has already moved HEAD, so read the commit itself
     diff = git("show", "--format=", "HEAD") if surface == "commit" else git("diff", "HEAD")
@@ -199,7 +200,6 @@ def execute(golden, repeats):
             except OSError:
                 pass
     return results
-
 
 def main():
     parser = argparse.ArgumentParser()

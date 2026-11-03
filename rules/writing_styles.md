@@ -81,6 +81,8 @@ Reuse the noun instead of a pronoun-like name. `data`, `temp`, `result`, `handle
 
 A name that needs a comment to disambiguate is the wrong name.
 
+A handler verb is fine when the name holds a callback: `const handle = () => save()`.
+
 ## Units
 
 A quantity without a unit is a bug waiting for a reader. Name the unit.
@@ -93,9 +95,13 @@ const fetchTimeout = 8000;
 const fetchTimeoutMs = 8000;
 ```
 
+A count has no unit: `pageSize`, `maxRetries`.
+
 ## Error messages
 
 Say what happened and what to do next.
+
+A stable snake_case code can stand alone. A code plus the action is better: `zip_open_failed: check the export directory is writable`.
 
 No stack trace as the message. No bare `Error:`.
 
