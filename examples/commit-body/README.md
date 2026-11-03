@@ -1,0 +1,3 @@
+# notes
+
+A small project.

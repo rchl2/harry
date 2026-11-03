@@ -46,6 +46,19 @@
       "commit": "Add aircraft source with position-age filter\n\nSlow planes were dropped before they reached the map.\n"
     }
   },
+  "commit_body": {
+    "bad": {
+      "commit": "Add filter\nThis commit adds a filter.\n"
+    },
+    "good": [
+      {
+        "commit": "Add filter\n\nSlow planes were dropped before they reached the map.\n"
+      },
+      {
+        "commit": "Add filter\n"
+      }
+    ]
+  },
   "error_message": {
     "bad": {
       "diff": "+throw new \\Exception('Failed to create ZIP file.');\n+throw new \\Exception('Something went wrong.');\n"
@@ -105,6 +118,19 @@
       "narration": "safe-fetch guards every outbound request.\n\nIt checks robots first, then follows redirects one hop at a time and re-checks each hop.\n\nIt fails closed: a redirect to a private address throws instead of being followed.\n"
     }
   },
+  "test_name": {
+    "bad": {
+      "diff": "+it('works', () => {\n+  expect(f()).toBe(1)\n+})\n+it('should filter slow planes', () => {\n+  expect(g()).toBe(2)\n+})\n"
+    },
+    "good": [
+      {
+        "diff": "+it('rejects redirects to private hosts', () => {\n+  expect(f()).toBe(1)\n+})\n"
+      },
+      {
+        "diff": "+it('returns 401 when the token expired', () => {\n+  expect(g()).toBe(2)\n+})\n"
+      }
+    ]
+  },
   "restate": {
     "bad": {
       "pr_body": "Various changes to the ingest path.\n"
@@ -149,6 +175,22 @@
     "good": {
       "diff": "+try {\n+  await send();\n+} catch (e) {\n+  // offline is fine, the queue retries\n+}\n"
     }
+  },
+  "swallow_log": {
+    "bad": {
+      "diff": "+try {\n+  await send();\n+} catch (e) {\n+  console.log(e)\n+}\n"
+    },
+    "good": [
+      {
+        "diff": "+try {\n+  await send();\n+} catch (e) {\n+  // offline is fine, the queue retries\n+}\n"
+      },
+      {
+        "diff": "+try {\n+  await send();\n+} catch (e) {\n+  console.error(e)\n+  throw e\n+}\n"
+      },
+      {
+        "diff": "+try {\n+  return await send();\n+} catch (e) {\n+  logger.warn(e)\n+  return null\n+}\n"
+      }
+    ]
   },
   "unit_in_name": {
     "bad": {

@@ -65,6 +65,8 @@ Imperative subject. Fifty characters. No trailing period. No `we`.
 
 The body is why, plus whatever a reader would otherwise get wrong.
 
+Skip `This commit`, `This PR`, and `Changes:`. They say nothing.
+
 No detritus. Not "changed X to Y because Z" — say what is true now.
 
 ## PR bodies
@@ -117,6 +119,20 @@ try { await send(); } catch (e) {}
 try { await send(); } catch (e) {
   // offline is fine, the queue retries
 }
+```
+
+Logging is not handling. If the catch only calls `console.log`, rethrow or say why.
+
+## Tests
+
+A test name says the behaviour and the condition. `works` and `should fetch` say nothing.
+
+```ts
+it('works', ...)
+```
+
+```ts
+it('rejects redirects to private hosts', ...)
 ```
 
 ## Narration

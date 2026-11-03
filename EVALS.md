@@ -10,7 +10,7 @@ You need it when you edit `rules/writing_styles.md`. Not otherwise.
 
 A golden is a small repo with one known prose problem, the task that should fix it, and the answer you expect.
 
-`examples/` ships eleven, so the rig works on a fresh clone. They are generic — replace them with your own.
+`examples/` ships fourteen, so the rig works on a fresh clone. They are generic — replace them with your own.
 
 ## Make your own
 

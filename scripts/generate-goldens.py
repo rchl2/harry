@@ -28,6 +28,8 @@ TASKS = {
     "comment_restates": "In {path}, replace the comment that restates the code with one that says why.",
     "name_pronoun": "In {path}, rename the vague local so the name says what it holds.",
     "error_message": "In {path}, make every thrown error say what happened and what to do next.",
+    "test_name": "In {path}, rename the weak test so it names the behaviour and the condition.",
+    "swallow_log": "In {path}, make the catch handle the failure instead of only logging it.",
     "commit_subject": "Add a one-line note to the README under the title, then commit it.",
     "pr_body": "Write the PR body for the diff between HEAD~1 and HEAD.",
     "narration": "Explain what {path} does and where it can fail.",
@@ -38,6 +40,8 @@ EXPECTED = {
     "comment_restates": "The comment carries the reason, not a description of the next line.",
     "name_pronoun": "The new name says what the value holds. No comment needed to disambiguate.",
     "error_message": "Each throw reads `code: what happened, what to do`.",
+    "test_name": "Each test name says the behaviour and the condition. No `works`, no `should`.",
+    "swallow_log": "The catch rethrows, or carries a comment saying why logging is enough.",
     "commit_subject": "Imperative subject under fifty characters, no trailing period, no `we`. The body says why.",
     "pr_body": "One sentence a reviewer can restate, then what changed, why, and how to check it.",
     "narration": "Segmented, one idea per paragraph, told as a story. Not a wall.",
@@ -86,7 +90,7 @@ def main():
             continue
 
         made = 0
-        for rule in ("comment_detritus", "comment_restates", "name_pronoun", "error_message"):
+        for rule in ("comment_detritus", "comment_restates", "name_pronoun", "error_message", "test_name", "swallow_log"):
             if made >= MAX_PER_REPO:
                 break
             for path in files(repo):

@@ -63,6 +63,11 @@ THROW = re.compile(r"throw new \\?[A-Za-z_][\w\\]*\(\s*[`'\"](.+?)[`'\"]")
 TODO = re.compile(r"\bTODO\b")
 TODO_OK = re.compile(r"\bTODO\([^)]+\)|\bTODO:\s*\S")
 EMPTY_CATCH = re.compile(r"\bcatch\s*(\([^)]*\))?\s*\{")
+CATCH = re.compile(r"\bcatch\s*(?:\([^)]*\))?\s*\{")
+LOG_CALL = re.compile(r"^(?:console\.\w+|logger\.\w+|log|print)\s*\(")
+TEST_NAME = re.compile(r"\b(?:it|test|specify)\s*\(\s*[`'\"]([^`'\"]+)[`'\"]")
+WEAK_TEST = re.compile(r"^(?:works?|it works|tests?|ok|does stuff)$", re.I)
+BODY_OPENER = re.compile(r"^(this (?:commit|pr|change)|the changes|changes:|updated|changed|modified)\b", re.I)
 
 # time always needs a unit; a qualified size says what is counted
 TIME_UNITS = {
@@ -85,11 +90,13 @@ HANDLE_CALLBACK = re.compile(
     r"|use[A-Z]\w*\s*\("
     r")"
 )
+
 STABLE_CODE = re.compile(
     r"^(?:[a-z][a-z0-9]*(?:_[a-z0-9]+)+"
     r"|[a-z][a-z0-9]*(?:\.[a-z0-9_]+)+"
     r"|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)$"
 )
+
 GENERIC_ERROR = re.compile(r"^(failed to|unable to|something went wrong|could not|error)\b", re.I)
 
 def _is_doc(path):
@@ -151,8 +158,10 @@ def comment_restates(bundle):
         if _is_doc(path):
             continue
         m = COMMENT.match(text)
+
         if not m:
             continue
+
         body = m.group(2).strip()
 
         if len(body.split()) < 2 or WHY.search(body):
@@ -271,6 +280,37 @@ def commit_subject(bundle):
         out.append(_finding("commit_subject", "", 0, "Drop `we`.", subject))
     return out
 
+def commit_body(bundle):
+    """A body says why. Filler openers and a repeated subject say nothing."""
+    out = []
+    lines = bundle.get("commit", "").splitlines()
+
+    if len(lines) < 2:
+        return out
+
+    subject = lines[0].strip()
+
+    if lines[1].strip():
+        out.append(_finding("commit_body", "", 0, "Blank line after the subject, then why.", subject))
+        body = [line for line in lines[1:] if line.strip()]
+    else:
+        body = [line for line in lines[2:] if line.strip()]
+
+    if not body:
+        return out
+
+    first = body[0].strip()
+    opener = BODY_OPENER.match(first)
+
+    if opener:
+        out.append(_finding("commit_body", "", 0, f"`{opener.group(0)}` is filler. Say what is true now.", first))
+
+    norm = lambda value: re.sub(r"\W+", " ", value.lower()).strip()
+
+    if norm(first) == norm(subject):
+        out.append(_finding("commit_body", "", 0, "The body repeats the subject. Say why.", first))
+    return out
+
 def intent_first(bundle):
     out = []
     for surface in ("pr_body", "narration"):
@@ -283,6 +323,24 @@ def intent_first(bundle):
 
         if not GOAL.search(head):
             out.append(_finding("intent_first", "", 0, f"{surface} opens without a goal or problem.", head))
+    return out
+
+def test_name(bundle):
+    """A test name carries the behaviour and its condition."""
+    out = []
+    for path, number, text in _added_lines(bundle.get("diff", "")):
+        if _is_doc(path):
+            continue
+        for m in TEST_NAME.finditer(text):
+            name = m.group(1).strip()
+            words = name.split()
+
+            if WEAK_TEST.match(name):
+                out.append(_finding("test_name", path, number, "`works` says nothing. Name the behaviour and the condition.", text))
+            elif words and words[0].lower() == "should":
+                out.append(_finding("test_name", path, number, "Drop `should`. Name the behaviour and the condition.", text))
+            elif len(words) < 3:
+                out.append(_finding("test_name", path, number, "Too short to say the behaviour. Add the condition.", text))
     return out
 
 def todo_bare(bundle):
@@ -321,6 +379,48 @@ def empty_catch(bundle):
             out.append(_finding("empty_catch", path, number, "Swallows the error. Say why, or rethrow.", text))
     return out
 
+def _catch_body(lines, index, rest):
+    """The lines inside this catch, up to its closing brace."""
+    if "}" in rest:
+        return [rest.split("}", 1)[0]]
+
+    body = []
+    depth = 1
+
+    for _, _, text in lines[index + 1:]:
+        depth += text.count("{") - text.count("}")
+        if depth <= 0:
+            body.append(text.split("}", 1)[0])
+            return body
+        body.append(text)
+
+    return body
+
+def swallow_log(bundle):
+    """Logging is not handling. A catch that only logs still hides the failure."""
+    out = []
+    lines = list(_added_lines(bundle.get("diff", "")))
+
+    for i, (path, number, text) in enumerate(lines):
+        if _is_doc(path):
+            continue
+
+        m = CATCH.search(text)
+        if not m:
+            continue
+
+        body = [line.strip() for line in _catch_body(lines, i, text[m.end():]) if line.strip()]
+
+        if not body or any(line.startswith(("//", "/*", "*")) for line in body):
+            continue
+
+        if any(re.search(r"\b(throw|return)\b", line) for line in body):
+            continue
+            
+        if all(LOG_CALL.match(line) for line in body):
+            out.append(_finding("swallow_log", path, number, "Logging is not handling. Rethrow or say why.", text))
+    return out
+
 def unit_in_name(bundle):
     """A quantity without a unit is a bug waiting for a reader."""
     out = []
@@ -353,9 +453,12 @@ DETERMINISTIC = {
     "error_message": error_message,
     "ste_procedure": ste_procedure,
     "commit_subject": commit_subject,
+    "commit_body": commit_body,
     "intent_first": intent_first,
+    "test_name": test_name,
     "todo_bare": todo_bare,
     "empty_catch": empty_catch,
+    "swallow_log": swallow_log,
     "unit_in_name": unit_in_name,
 }
 

@@ -35,7 +35,9 @@ $ /harry
 - `const fetchTimeout` with no unit
 - error messages that only say `Failed to load`
 - commented-out code
-- bare TODOs, and catches that swallow silently
+- bare TODOs, and catches that swallow silently or only log
+- test names that say `works` or start with `should`
+- commit bodies that open with `This commit`
 
 ## Commands
 

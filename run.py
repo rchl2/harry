@@ -218,7 +218,7 @@ def main():
 
     if args.commit_msg:
         text = pathlib.Path(args.commit_msg).read_text()
-        result = grade_bundle({"commit": text}, {"commit_subject"}, judged=False)
+        result = grade_bundle({"commit": text}, {"commit_subject", "commit_body"}, judged=False)
 
         if result["pass"]:
             print("clean")
