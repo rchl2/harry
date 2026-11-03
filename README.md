@@ -54,6 +54,8 @@ $ /harry
 
 `rules/writing_styles.md`. Edit them. Settings has a Harry section for turning injection and the automatic check off.
 
+Word tables and patterns — detritus, stiff words, vague names, units — live in `graders/lexicon.py`. The grader logic is in `graders/deterministic.py`.
+
 The rules are global. Test sets are not: `/harry-goldens` writes `.harry/` in the project, so switching projects switches the set and never the rules.
 
 ## Updating

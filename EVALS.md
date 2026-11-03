@@ -56,6 +56,8 @@ python3 run.py --calibrate
 
 Grades the bad and good example for each rule. Every rule must fail the bad one and pass the good one. A rule that cannot is a bug in the grader, not the rule.
 
+Shared word lists live in `graders/lexicon.py`. Add the fixture first, then the word.
+
 ## Judged rules
 
 Four rules need reading rather than matching: why-not-what, restate, segmentation, and `what?` recovery.
