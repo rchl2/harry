@@ -57,13 +57,10 @@ def _key():
         return KEY
     return pathlib.Path(KEY_FILE).expanduser().read_text().strip()
 
-
-def available():
-    """Judging needs either an endpoint with a key, or the opencode CLI."""
+def configured():
     if ENDPOINT:
         return bool(KEY) or bool(KEY_FILE and pathlib.Path(KEY_FILE).expanduser().exists())
     return shutil.which("opencode") is not None
-
 
 def _comments(bundle):
     return [
@@ -72,11 +69,14 @@ def _comments(bundle):
         if line.startswith("+") and line[1:].strip().startswith(("//", "#"))
     ]
 
-
 def _parse(content):
     content = content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    return json.loads(content).get("findings", [])
-
+    if not content:
+        raise ValueError("judge returned no JSON")
+    try:
+        return json.loads(content).get("findings", [])
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"judge returned no JSON: {content[:120]}") from exc
 
 def _ask_http(question, evidence):
     body = json.dumps({
@@ -99,7 +99,6 @@ def _ask_http(question, evidence):
 
     return _parse(payload["choices"][0]["message"]["content"])
 
-
 def _ask_cli(question, evidence):
     """Run the judge through opencode, so it uses the configured model and auth."""
     prompt = f"{SYSTEM}\n\n{question}\n\n---\n{evidence}"
@@ -112,16 +111,27 @@ def _ask_cli(question, evidence):
         proc = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True, timeout=300)
 
     text = []
+    failure = ""
     for line in proc.stdout.splitlines():
         try:
-            part = json.loads(line).get("part") or {}
+            event = json.loads(line)
         except json.JSONDecodeError:
             continue
+        if event.get("type") == "error":
+            failure = (event.get("error") or {}).get("message") or line
+            continue
+        part = event.get("part") or {}
         if part.get("type") == "text" and part.get("text"):
             text.append(part["text"])
 
-    return _parse("\n".join(text))
+    if not text:
+        detail = failure or proc.stderr.strip() or f"exit {proc.returncode}"
+        hint = ""
+        if "not available in your country" in detail or "RegionError" in detail:
+            hint = " Set HARRY_JUDGE_MODEL to a model available in your region."
+        raise RuntimeError(f"judge failed: {detail}.{hint}")
 
+    return _parse("\n".join(text))
 
 def _ask(question, evidence):
     return _ask_http(question, evidence) if ENDPOINT else _ask_cli(question, evidence)
@@ -140,9 +150,14 @@ def grade(bundle, rules=None):
     if not wanted:
         return []
 
-    if not available():
+    if not configured():
         return [
-            {"rule": rule, "pass": True, "reason": "no judge: install opencode or set HARRY_JUDGE_URL"}
+            {
+                "rule": rule,
+                "pass": True,
+                "status": "skipped",
+                "reason": "no judge: install opencode or set HARRY_JUDGE_URL",
+            }
             for rule in wanted
         ]
 
@@ -151,11 +166,19 @@ def grade(bundle, rules=None):
 
     try:
         found = _ask(question, evidence)
-    except Exception as exc:  # a judge outage is a harness bug, not a finding
-        return [{"rule": r, "pass": True, "reason": f"judge error: {exc}"} for r in wanted]
+    except Exception as exc:  # a judge outage is not a prose finding
+        return [
+            {"rule": rule, "pass": True, "status": "error", "reason": f"judge error: {exc}"}
+            for rule in wanted
+        ]
 
     failed = {f.get("rule"): f.get("reason", "") for f in found if f.get("rule") in wanted}
     return [
-        {"rule": rule, "pass": rule not in failed, "reason": str(failed.get(rule, ""))[:300]}
+        {
+            "rule": rule,
+            "pass": rule not in failed,
+            "status": "fail" if rule in failed else "pass",
+            "reason": str(failed.get(rule, ""))[:300],
+        }
         for rule in wanted
     ]

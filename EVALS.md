@@ -62,7 +62,9 @@ Four rules need reading rather than matching: why-not-what, restate, segmentatio
 
 They run through the opencode CLI, so they use the model and credentials you already have. `HARRY_JUDGE_MODEL` picks a different model.
 
-For an OpenAI-compatible endpoint instead, set `HARRY_JUDGE_URL`, `HARRY_JUDGE_KEY`, and `HARRY_JUDGE_MODEL`. Without either path the judged rules pass and say so.
+For an OpenAI-compatible endpoint instead, set `HARRY_JUDGE_URL`, `HARRY_JUDGE_KEY`, and `HARRY_JUDGE_MODEL`.
+
+A judged rule that finds nothing passes. With no judge configured it is skipped. If the judge call fails, calibrate prints `ERROR` and exits non-zero, so a provider outage cannot look like a pass. A fail is the prose.
 
 ## Agents
 

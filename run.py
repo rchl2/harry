@@ -38,7 +38,6 @@ GENERATED = re.compile(
     r"|\.snap$"
 )
 
-
 def strip_generated(diff):
     """Drop hunks for build output and lockfiles; they are not written by hand."""
     out = []
@@ -50,7 +49,6 @@ def strip_generated(diff):
         if keep:
             out.append(line)
     return "\n".join(out)
-
 
 def load_goldens(only=None):
     """The project's own set, else the shipped examples. `dir` is relative to the set."""
@@ -72,12 +70,13 @@ def load_goldens(only=None):
 def grade_bundle(bundle, rules=None, judged=True):
     findings = det.grade(bundle, rules)
     verdicts = judges.grade(bundle, rules) if judged else []
-    failed = {f["rule"] for f in findings} | {v["rule"] for v in verdicts if not v["pass"]}
+    failed = {f["rule"] for f in findings} | {v["rule"] for v in verdicts if v["status"] == "fail"}
     return {
         "pass": not failed,
         "failed_rules": sorted(failed),
         "findings": findings,
         "verdicts": verdicts,
+        "errors": [v for v in verdicts if v["status"] == "error"],
     }
 
 def print_findings(result):
@@ -86,22 +85,26 @@ def print_findings(result):
         if f["excerpt"]:
             print(f"    {f['excerpt']}")
     for v in result["verdicts"]:
-        if not v["pass"]:
+        if v["status"] in ("fail", "error"):
             print(f"  {v['rule']}  {v['reason']}")
 
 def calibrate():
     """A grader that cannot separate bad from good is a harness bug."""
     fixtures = json.loads((ROOT / "fixtures.json").read_text())
-    judged = not judges.available()
+    has_judge = judges.configured()
     ok = True
     for rule, pair in fixtures.items():
-        if judged and rule in judges.RULES:
+        if not has_judge and rule in judges.RULES:
             print(f"skip  {rule}: no judge")
             continue
         bad = grade_bundle(pair["bad"], {rule})
         good = grade_bundle(pair["good"], {rule})
+        errors = bad["errors"] or good["errors"]
 
-        if bad["pass"]:
+        if errors:
+            print(f"ERROR {rule}: {errors[0]['reason']}")
+            ok = False
+        elif bad["pass"]:
             print(f"FAIL  {rule}: passed the bad fixture")
             ok = False
         elif not good["pass"]:
