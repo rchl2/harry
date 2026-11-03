@@ -81,6 +81,14 @@ export default Plugin.define({
         const found = await scoped.findings(await scoped.working())
         return { items: found.map(({ rule, file, line, message }) => ({ rule, file, line, message })) }
       },
+      review: async (input) => {
+        const { text, surface } = input as { text?: string; surface?: string }
+        const kind = surface ?? "comments"
+        const scoped = at(input)
+        const evidence = kind === "comments" ? await scoped.working() : (text ?? "")
+        if (!evidence.trim()) return { clean: true, output: "Nothing to review." }
+        return scoped.review(evidence, kind)
+      },
       lastUpdate: async () => {
         const stored = (await ctx.storage.get("update-result")) as { message: string } | undefined
         await ctx.storage.remove("update-result")
@@ -105,6 +113,30 @@ export default Plugin.define({
           await context.progress({ status: "checking prose" })
           const result = await h.lint(diff)
           return { content: result.clean ? "Prose is clean." : result.output }
+        },
+      })
+
+      editor.add({
+        name: "harry_review",
+        description: "Run the judged prose review. It costs a model call, so use it before handing work over. Reviews diff comments by default, or pass pr_body, narration, or what_after text.",
+        input: {
+          type: "object",
+          properties: {
+            surface: { type: "string", enum: ["comments", "pr_body", "narration", "what_after"] },
+            text: { type: "string" },
+          },
+          additionalProperties: false,
+        },
+        execute: async (input, context) => {
+          const { surface = "comments", text } = input as { surface?: string; text?: string }
+          if (surface !== "comments" && !text?.trim()) return { content: "Pass the text to review." }
+
+          const evidence = surface === "comments" ? await h.working() : text!
+          if (!evidence.trim()) return { content: "Nothing to review." }
+
+          await context.progress({ status: "judging prose" })
+          const review = await h.review(evidence, surface)
+          return { content: review.clean ? "Judged prose is clean." : review.output }
         },
       })
     })

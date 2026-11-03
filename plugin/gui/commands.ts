@@ -1,7 +1,7 @@
 import { commitFlow } from "./commit"
 import { toItems, type State } from "./state"
 import { Command, type Context } from "@opencode/plugin/gui"
-import { Harry, type Evaluate, type Findings, type Reload, type Status } from "../rpc"
+import { Harry, type Evaluate, type Findings, type Reload, type Review, type Status } from "../rpc"
 
 export function registerCommands(ctx: Context, state: State) {
   ctx.add(Command, () => ({
@@ -32,7 +32,7 @@ export function registerCommands(ctx: Context, state: State) {
   ctx.add(Command, () => ({
     id: "open",
     title: "Open harry rules",
-    description: "Open the rules file in your editor",
+    description: "Open the Harry rules file in your editor.",
     group: "Harry",
     slash: { name: "harry-open" },
     run: async () => {
@@ -57,7 +57,7 @@ export function registerCommands(ctx: Context, state: State) {
   ctx.add(Command, () => ({
     id: "check",
     title: "Check prose",
-    description: "Lint now, without waiting for a turn",
+    description: "Lint now, without waiting for a turn.",
     group: "Harry",
     slash: { name: "harry" },
     run: async () => {
@@ -81,10 +81,41 @@ export function registerCommands(ctx: Context, state: State) {
     },
   }))
 
+  ctx.add(Command, () => ({
+    id: "review",
+    title: "Review prose",
+    description: "Run the judged rules on the comments in these changes. Costs a model call.",
+    group: "Harry",
+    slash: { name: "harry-review" },
+    run: async () => {
+      const running = ctx.toast.show({
+        title: "Harry",
+        description: "Judging the comments…",
+        variant: "loading",
+        persistent: true,
+      })
+      try {
+        const review = (await ctx.client.rpc(Harry).review({
+          directory: state.currentDirectory(),
+        })) as Review
+        running.dismiss()
+        ctx.toast.show({
+          title: "Harry",
+          description: review.clean ? "Judged prose is clean." : review.output,
+          variant: review.clean ? "success" : "error",
+          duration: 12000,
+        })
+      } catch (error) {
+        running.dismiss()
+        ctx.toast.show({ title: "Harry", description: `Review failed: ${error}`, variant: "error", duration: 8000 })
+      }
+    },
+  }))
+
   ctx.add(Command, (): Command => ({
     id: "commit",
     title: "Commit",
-    description: "Lint the staged diff, suggest a message, and commit",
+    description: "Lint the staged diff, suggest a message, and commit.",
     group: "Harry",
     slash: { name: "commit", arguments: true },
     run: async (input) => commitFlow(ctx, state, input),
@@ -93,7 +124,7 @@ export function registerCommands(ctx: Context, state: State) {
   ctx.add(Command, () => ({
     id: "goldens",
     title: "Make goldens",
-    description: "Ask the agent to build a golden set from this project",
+    description: "Ask the agent to build a golden set from this project.",
     group: "Harry",
     slash: { name: "harry-goldens" },
     run: async () => {
@@ -109,7 +140,7 @@ export function registerCommands(ctx: Context, state: State) {
   ctx.add(Command, () => ({
     id: "eval",
     title: "Run the goldens",
-    description: "Run every golden once and report pass and fail",
+    description: "Run every golden once and report pass and fail.",
     group: "Harry",
     slash: { name: "harry-eval" },
     run: async () => {
@@ -140,7 +171,7 @@ export function registerCommands(ctx: Context, state: State) {
   ctx.add(Command, () => ({
     id: "reload",
     title: "Reload harry rules",
-    description: "Re-read the rules after editing them",
+    description: "Re-read the rules after editing them.",
     group: "Harry",
     slash: { name: "harry-reload" },
     run: async () => {
@@ -160,7 +191,7 @@ export function registerCommands(ctx: Context, state: State) {
   ctx.add(Command, () => ({
     id: "update",
     title: "Update harry",
-    description: "Reinstall from the repo and clear the cache",
+    description: "Reinstall from the repo and clear the cache.",
     group: "Harry",
     slash: { name: "harry-update" },
     run: async () => {

@@ -54,6 +54,16 @@ export function harness(directory: string, pluginDir: string) {
       return { clean: output === "clean", output }
     },
 
+    async review(text: string, surface: string): Promise<Lint> {
+      if (! root) {
+        return { clean: false, output: "Harry not found. Set HARRY_HARNESS or vendor it." }
+      }
+
+      const { stdout, stderr } = await exec("python3", [script, "--review", "--surface", surface], directory, text)
+      const output = stdout.trim() || stderr.trim() || "review failed"
+      return { clean: output === "clean", output }
+    },
+
     async findings(diff: string): Promise<Finding[]> {
       if (!root) return []
       const { stdout } = await exec("python3", [script, "--diff", "-", "--json"], directory, diff)

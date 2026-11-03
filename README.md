@@ -44,6 +44,7 @@ $ /harry
 ## Commands
 
 - `/harry` lints now, without waiting for a turn.
+- `/harry-review` runs the four judged rules on the current diff comments. Costs a model call.
 - `/harry-open` opens the rules, `/harry-reload` re-reads them after an edit.
 - `/commit` lints the staged diff, offers three subjects, and commits the one you pick. Harry also offers this when a turn ends clean with something staged.
 - `/harry-status` shows whether it is loaded, `/harry-update` reinstalls.

@@ -5,6 +5,7 @@
                 every task, before handing work over.
   --calibrate   grade the fixtures. Every grader must fail its bad fixture and
                 pass its good one. Run this after touching a grader.
+  --review      run the judged rules on stdin. Costs a model call.
   --task ID     run an agent on a golden, capture the artifacts, grade them.
                 Slow and paid. Use this when you change a rule.
 
@@ -212,6 +213,13 @@ def main():
     parser.add_argument("--json", action="store_true", help="print findings as JSON")
     parser.add_argument("--suggest", action="store_true", help="suggest a fixed commit subject")
     parser.add_argument("--strict", action="store_true", help="exit 1 when a finding is left")
+    parser.add_argument("--review", action="store_true", help="run the judged rules on stdin")
+    parser.add_argument(
+        "--surface",
+        choices=("comments", "pr_body", "narration", "what_after"),
+        default="comments",
+        help="which judged rule to run (default: comments in a diff)",
+    )
     args = parser.parse_args()
 
     if args.calibrate:
@@ -229,6 +237,25 @@ def main():
                 better = fix.subject(text)
                 if better:
                     print(f"\nsuggested: {better}")
+        sys.exit(1 if args.strict and not result["pass"] else 0)
+
+    if args.review:
+        text = sys.stdin.read()
+        if not text.strip():
+            print("[]" if args.json else "nothing to review")
+            sys.exit(0)
+
+        bundle = {"diff": text} if args.surface == "comments" else {args.surface: text}
+        result = grade_bundle(bundle, set(judges.RULES))
+
+        if args.json:
+            print(json.dumps(result["verdicts"]))
+        elif all(v["status"] == "skipped" for v in result["verdicts"]):
+            print("no judge: install opencode or set HARRY_JUDGE_URL")
+        elif result["pass"]:
+            print("clean")
+        else:
+            print_findings(result)
         sys.exit(1 if args.strict and not result["pass"] else 0)
 
     if args.diff:

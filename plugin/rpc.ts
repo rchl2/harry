@@ -3,10 +3,11 @@ import type { Rpc } from "@opencode/schema/rpc"
 export type Reload = { rules: number }
 export type Apply = { message: string }
 export type Update = { message: string }
-export type Evaluate = { message: string }
 export type Staged = { staged: boolean }
+export type Evaluate = { message: string }
 export type Findings = { items: Finding[] }
 export type LastUpdate = { message: string | null }
+export type Review = { clean: boolean; output: string }
 export type Status = { root: string | null; rules: number }
 export type Settings = { injectRules: boolean; autoCheck: boolean }
 export type Prepare = { staged: boolean; findings: string; candidates: string[] }
@@ -49,6 +50,21 @@ export const Harry = {
           },
         },
         required: ["items"],
+      },
+    },
+    review: {
+      input: {
+        type: "object",
+        properties: {
+          directory: { type: "string" },
+          surface: { type: "string", enum: ["comments", "pr_body", "narration", "what_after"] },
+          text: { type: "string" },
+        },
+      },
+      output: {
+        type: "object",
+        properties: { clean: { type: "boolean" }, output: { type: "string" } },
+        required: ["clean", "output"],
       },
     },
     staged: {
