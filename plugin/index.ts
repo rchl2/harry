@@ -1,8 +1,8 @@
 import { harness } from "./lib"
 import { draft } from "./draft"
 import { fileURLToPath } from "node:url"
-import { Plugin } from "@opencode/plugin"
 import { createHash } from "node:crypto"
+import { Plugin } from "@opencode/plugin"
 import { read, skillLoader } from "./rules"
 import { Harry, type Settings } from "./rpc"
 
@@ -111,6 +111,7 @@ export default Plugin.define({
 
     const atTurnStart = new Map<string, string>()
     const nags = new Map<string, number>()
+    const lastNag = new Map<string, string>()
     const controller = new AbortController()
 
     // a global install is bound to the home directory, so scope every check to the session
@@ -129,6 +130,7 @@ export default Plugin.define({
         if (event.type === "session.inbox.delivered") {
           const sessionID = event.data.sessionID
           nags.delete(sessionID)
+          lastNag.delete(sessionID)
           atTurnStart.set(sessionID, await hashOf(sessionID))
           continue
         }
@@ -148,7 +150,13 @@ export default Plugin.define({
         const checked = await target.lint(diff).catch(() => null)
         if (!checked || checked.clean) continue
 
+        // the diff moved, but the same wall should not be shown again
+        const nag = createHash("sha1").update(checked.output).digest("hex")
+        if (lastNag.get(sessionID) === nag) continue
+
         nags.set(sessionID, (nags.get(sessionID) ?? 0) + 1)
+        lastNag.set(sessionID, nag)
+        
         await ctx.session
           .synthetic({ sessionID, text: `Prose check:\n${checked.output}` })
           .catch(() => {})
