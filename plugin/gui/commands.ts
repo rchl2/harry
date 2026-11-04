@@ -1,7 +1,7 @@
 import { commitFlow } from "./commit"
 import { toItems, type State } from "./state"
 import { Command, type Context } from "@opencode/plugin/gui"
-import { Harry, type Evaluate, type Findings, type Reload, type Review, type Status } from "../rpc"
+import { Harry, type Evaluate, type Findings, type Reload, type Review, type Status, type Update } from "../rpc"
 
 export function registerCommands(ctx: Context, state: State) {
   ctx.add(Command, () => ({
@@ -195,10 +195,23 @@ export function registerCommands(ctx: Context, state: State) {
     group: "Harry",
     slash: { name: "harry-update" },
     run: async () => {
-      ctx.toast.show({ title: "Harry", description: "Reinstalling Harry…", variant: "loading", persistent: true })
+      const running = ctx.toast.show({
+        title: "Harry",
+        description: "Reinstalling Harry…",
+        variant: "loading",
+        persistent: true,
+      })
       try {
-        await ctx.client.rpc(Harry).update({})
+        const { message } = (await ctx.client.rpc(Harry).update({})) as Update
+        running.dismiss()
+        ctx.toast.show({
+          title: "Harry",
+          description: message,
+          variant: message.startsWith("Updated") ? "success" : "default",
+          duration: 8000,
+        })
       } catch (error) {
+        running.dismiss()
         ctx.toast.show({ title: "Harry", description: `Update failed: ${error}`, variant: "error", duration: 8000 })
       }
     },

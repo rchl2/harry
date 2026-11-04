@@ -97,7 +97,8 @@ export default Plugin.define({
       evaluate: async (input) => ({ message: await h.evaluate((input as { directory?: string }).directory ?? ctx.location.directory) }),
       update: async () => {
         const message = await h.update()
-        await ctx.storage.set("update-result", { message })
+        // only a real update outlives this window; "no updates" has no reload to show it
+        if (message.startsWith("Updated")) await ctx.storage.set("update-result", { message })
         return { message }
       },
     })

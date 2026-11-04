@@ -7,16 +7,26 @@ import { rm, writeFile } from "node:fs/promises"
 export type Lint = { clean: boolean; output: string }
 export type Finding = { rule: string; file: string; line: number; message: string; excerpt: string }
 
-function exec(command: string, args: string[], cwd: string, stdin?: string) {
+function exec(command: string, args: string[], cwd: string, stdin?: string, timeout = 0) {
   return new Promise<{ code: number; stdout: string; stderr: string }>((resolve) => {
     const child = spawn(command, args, { cwd })
     let stdout = ""
     let stderr = ""
+    const timer = timeout
+      ? setTimeout(() => {
+          child.kill("SIGTERM")
+          setTimeout(() => child.kill("SIGKILL"), 5000)
+        }, timeout)
+      : undefined
+    const done = (result: { code: number; stdout: string; stderr: string }) => {
+      if (timer) clearTimeout(timer)
+      resolve(result)
+    }
 
     child.stdout.on("data", (chunk) => (stdout += chunk))
     child.stderr.on("data", (chunk) => (stderr += chunk))
-    child.on("error", (error) => resolve({ code: -1, stdout, stderr: String(error) }))
-    child.on("close", (code) => resolve({ code: code ?? -1, stdout, stderr }))
+    child.on("error", (error) => done({ code: -1, stdout, stderr: String(error) }))
+    child.on("close", (code) => done({ code: code ?? -1, stdout, stderr }))
 
     if (stdin !== undefined) child.stdin.end(stdin)
     else child.stdin.end()
@@ -108,8 +118,16 @@ export function harness(directory: string, pluginDir: string) {
     },
 
     async update(): Promise<string> {
-      const { code, stdout, stderr } = await exec("opencode", ["plugin", "update", "opencode-harry"], directory)
-      return code === 0 ? "Updated. Restart opencode." : (stderr || stdout).trim()
+      const { code, stdout, stderr } = await exec(
+        "opencode",
+        ["plugin", "update", "opencode-harry"],
+        directory,
+        undefined,
+        120_000,
+      )
+      const output = (stdout || stderr).trim()
+      if (output) return output
+      return code === 0 ? "Updated. Restart opencode." : `Update failed (exit ${code}).`
     },
 
     async working(): Promise<string> {
