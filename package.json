@@ -4,11 +4,13 @@
   "type": "module",
   "exports": {
     ".": "./plugin/index.ts",
+    "./tui": "./plugin/tui.ts",
     "./rpc": "./plugin/rpc.ts",
     "./gui-experimental": "./dist/gui-experimental.cjs"
   },
   "files": [
     "plugin/index.ts",
+    "plugin/tui.ts",
     "plugin/lib.ts",
     "plugin/rpc.ts",
     "plugin/draft.ts",
